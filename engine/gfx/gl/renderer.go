@@ -120,7 +120,6 @@ func (r *RendererGL) CreateTexture(desc core.TextureDesc) (core.Texture, error) 
 		return nil, fmt.Errorf("only RGBA8 supported for now")
 	}
 	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, int32(desc.Width), int32(desc.Height), 0, gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(desc.Pixels))
-	// No mipmaps for simplicity (use MIN_FILTER=linear/nearest); add gl.GenerateMipmap if you want
 
 	gl.BindTexture(gl.TEXTURE_2D, 0)
 	return &texGL{id: id, w: desc.Width, h: desc.Height}, nil

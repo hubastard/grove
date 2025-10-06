@@ -83,6 +83,7 @@ func (g *GLFWWindow) emit(ev core.Event) {
 func (g *GLFWWindow) PollEvents()                          { glfw.PollEvents() }
 func (g *GLFWWindow) SwapBuffers()                         { g.w.SwapBuffers() }
 func (g *GLFWWindow) ShouldClose() bool                    { return g.w.ShouldClose() }
+func (g *GLFWWindow) RequestClose()                        { g.w.SetShouldClose(true) }
 func (g *GLFWWindow) FramebufferSize() (int, int)          { return g.w.GetFramebufferSize() }
 func (g *GLFWWindow) SetTitle(t string)                    { g.w.SetTitle(t) }
 func (g *GLFWWindow) SetEventCallback(cb func(core.Event)) { g.onEv = cb }

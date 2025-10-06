@@ -26,6 +26,7 @@ type Window interface {
 	PollEvents()
 	SwapBuffers()
 	ShouldClose() bool
+	RequestClose()
 	FramebufferSize() (int, int)
 	SetTitle(title string)
 	SetEventCallback(cb func(Event))

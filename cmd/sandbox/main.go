@@ -82,7 +82,7 @@ func (l *Layer2D) OnAttach(e *core.Engine) {
 		Height:    h,
 		Format:    core.TextureRGBA8,
 		Pixels:    pixels,
-		MinFilter: "nearest",
+		MinFilter: "linear",
 		MagFilter: "nearest",
 		WrapU:     "clamp",
 		WrapV:     "clamp",
@@ -104,6 +104,10 @@ func (l *Layer2D) OnDetach(e *core.Engine) {}
 func (l *Layer2D) OnUpdate(e *core.Engine, dt float64) {
 	l.ctrl.Update(e, float32(dt))
 	l.t += float32(dt)
+
+	if e.Input.IsKeyDown(core.KeyEscape) {
+		e.Window.RequestClose()
+	}
 }
 
 func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {

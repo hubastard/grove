@@ -5,14 +5,12 @@ import "github.com/hubastard/grove/engine/core"
 // SubTexture2D describes a UV sub-rect of a full texture.
 type SubTexture2D struct {
 	Texture core.Texture
-	U0, V0  float32 // top-left (after the shader’s V flip)
-	U1, V1  float32 // bottom-right
+	U0, V0  float32
+	U1, V1  float32
 }
 
 // FromPixels builds a subtexture from pixel coordinates within an atlas.
 func FromPixels(tex core.Texture, x, y, w, h, atlasW, atlasH int) SubTexture2D {
-	// Convert to normalized UVs. We assume vertex shader flips V:
-	// vUV = vec2(aUV.x, 1.0 - aUV.y)
 	u0 := float32(x) / float32(atlasW)
 	v0 := float32(y) / float32(atlasH)
 	u1 := float32(x+w) / float32(atlasW)
