@@ -12,7 +12,7 @@ type OrthoController2D struct {
 
 func NewOrthoController2D(cam *OrthoCamera2D) *OrthoController2D {
 	return &OrthoController2D{
-		MoveSpeed: 1,
+		MoveSpeed: 400,
 		RotSpeed:  2.0,
 		ZoomSpeed: 1.2,
 		Camera:    cam,
