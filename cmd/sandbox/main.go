@@ -12,6 +12,7 @@ import (
 	"github.com/hubastard/grove/engine/platform"
 	"github.com/hubastard/grove/engine/profiler"
 	"github.com/hubastard/grove/engine/scene"
+	"github.com/hubastard/grove/engine/text"
 )
 
 type App struct {
@@ -61,6 +62,7 @@ type Layer2D struct {
 	ctrl   *scene.OrthoController2D
 	r2d    *renderer2d.Renderer2D
 	tex    core.Texture
+	font   *text.FontAtlas
 	player renderer2d.SubTexture2D
 	red    [4]float32
 	green  [4]float32
@@ -87,6 +89,11 @@ func (l *Layer2D) OnAttach(e *core.Engine) {
 	}
 
 	l.r2d, err = renderer2d.New(e.Renderer, vs, fs, 10000)
+	if err != nil {
+		panic(err)
+	}
+
+	l.font, err = text.LoadTTF(e.Renderer, "RobotoMono.ttf", 32)
 	if err != nil {
 		panic(err)
 	}
@@ -146,8 +153,10 @@ func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 		}
 	}
 
-	tint := [4]float32{1, 1, 1, 1}
-	l.r2d.DrawSubTexQuad(0, 0, 32, 32, l.player, tint, l.t)
+	l.r2d.DrawSubTexQuad(0, 0, 32, 32, l.player, l.white, l.t)
+
+	stats := l.Stats()
+	text.DrawText(l.r2d, l.font, -500, -500, fmt.Sprintf("Draw Calls: %d", stats.DrawCalls), l.white)
 
 	l.r2d.EndScene()
 	l.stats = l.r2d.Stats()

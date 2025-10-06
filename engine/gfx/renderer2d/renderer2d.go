@@ -139,12 +139,12 @@ func (rd *Renderer2D) drawQuadInternal(x, y, w, h float32, color [4]float32, rot
 	halfW := w * 0.5
 	halfH := h * 0.5
 
-	// corners (TL, TR, BL, BR) with UVs
+	// corners (TL, TR, BL, BR) with UVs. Positive Y goes down so top is -halfH.
 	corners := [4][4]float32{
-		{-halfW, halfH, u0, v0},
-		{halfW, halfH, u1, v0},
-		{-halfW, -halfH, u0, v1},
-		{halfW, -halfH, u1, v1},
+		{-halfW, -halfH, u0, v0},
+		{halfW, -halfH, u1, v0},
+		{-halfW, halfH, u0, v1},
+		{halfW, halfH, u1, v1},
 	}
 	c, s := float32(math.Cos(float64(rotationRad))), float32(math.Sin(float64(rotationRad)))
 

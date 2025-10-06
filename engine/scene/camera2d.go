@@ -18,7 +18,7 @@ func NewOrtho2D(width, height int) *OrthoCamera2D {
 	halfH := float32(height) * 0.5
 	c := &OrthoCamera2D{
 		Left: -halfW, Right: halfW,
-		Bottom: -halfH, Top: halfH,
+		Bottom: halfH, Top: -halfH,
 		Near: -1, Far: 1,
 		Zoom: 1,
 	}
@@ -30,7 +30,7 @@ func (c *OrthoCamera2D) SetViewportPixels(w, h int) {
 	halfW := float32(w) * 0.5
 	halfH := float32(h) * 0.5
 	c.Left, c.Right = -halfW, halfW
-	c.Bottom, c.Top = -halfH, halfH
+	c.Bottom, c.Top = halfH, -halfH
 	c.dirty = true
 }
 

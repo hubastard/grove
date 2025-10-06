@@ -25,10 +25,10 @@ func (cc *OrthoController2D) Update(e *core.Engine, dt float32) {
 	rotSpeed := cc.RotSpeed * dt
 
 	if in.IsKeyDown(core.KeyW) {
-		cc.Camera.Move(0, speed)
+		cc.Camera.Move(0, -speed)
 	}
 	if in.IsKeyDown(core.KeyS) {
-		cc.Camera.Move(0, -speed)
+		cc.Camera.Move(0, speed)
 	}
 	if in.IsKeyDown(core.KeyA) {
 		cc.Camera.Move(-speed, 0)
