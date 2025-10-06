@@ -10,6 +10,7 @@ import (
 	glbackend "github.com/hubastard/grove/engine/gfx/gl"
 	"github.com/hubastard/grove/engine/gfx/renderer2d"
 	"github.com/hubastard/grove/engine/platform"
+	"github.com/hubastard/grove/engine/profiler"
 	"github.com/hubastard/grove/engine/scene"
 )
 
@@ -20,6 +21,8 @@ type App struct {
 }
 
 func (a *App) OnStart(e *core.Engine) {
+	profiler.Init(1 << 10) // ~1K scope samples
+
 	// push the 2D demo layer
 	l := &Layer2D{}
 	e.Layers.Push(l)
@@ -144,7 +147,6 @@ func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 	}
 
 	tint := [4]float32{1, 1, 1, 1}
-	// l.r2d.DrawTexturedQuad(0, 0, 384, 704, l.tex, tint, 0)
 	l.r2d.DrawSubTexQuad(0, 0, 32, 32, l.player, tint, l.t)
 
 	l.r2d.EndScene()
@@ -153,6 +155,15 @@ func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 
 func (l *Layer2D) OnEvent(e *core.Engine, ev core.Event) bool {
 	switch v := ev.(type) {
+	case core.EventKey:
+		if v.Down && v.Key == core.KeyP && (v.Mods&core.ModCtrl) != 0 {
+			if path, err := profiler.OpenProfilerGraph(); err == nil {
+				fmt.Println("speedscope dump:", path)
+			} else {
+				fmt.Println("profiler dump error:", err)
+			}
+			return true
+		}
 	case core.EventResize:
 		l.cam.SetViewportPixels(v.W, v.H)
 	case core.EventScroll:
@@ -167,8 +178,9 @@ func (l *Layer2D) Stats() renderer2d.Statistics { return l.stats }
 
 func main() {
 	cfg := core.Config{
-		Title: "Go Engine (2D)",
-		Width: 1280, Height: 720,
+		Title:      "Go Engine (2D)",
+		Width:      1280,
+		Height:     720,
 		VSync:      true,
 		ClearColor: [4]float32{0.08, 0.10, 0.12, 1},
 	}
