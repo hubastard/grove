@@ -98,6 +98,12 @@ func (rd *Renderer2D) DrawTexturedQuadUV(x, y, w, h float32, tex core.Texture, t
 	rd.drawQuadInternal(x, y, w, h, tint, rotationRad, slot, u0, v0, u1, v1)
 }
 
+// DrawSubTexQuad draws a quad using a SubTexture2D (tint + rotation optional).
+func (rd *Renderer2D) DrawSubTexQuad(x, y, w, h float32, sub SubTexture2D, tint [4]float32, rotationRad float32) {
+	slot := rd.texSlot(sub.Texture)
+	rd.drawQuadInternal(x, y, w, h, tint, rotationRad, slot, sub.U0, sub.V0, sub.U1, sub.V1)
+}
+
 // --- internals ---
 
 func (rd *Renderer2D) texSlot(t core.Texture) float32 {

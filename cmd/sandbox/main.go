@@ -39,15 +39,16 @@ func (a *App) OnShutdown(e *core.Engine)              {}
 
 // ------- A simple 2D Layer demo -------
 type Layer2D struct {
-	cam   *scene.OrthoCamera2D
-	ctrl  *scene.OrthoController2D
-	r2d   *renderer2d.Renderer2D
-	tex   core.Texture
-	red   [4]float32
-	green [4]float32
-	blue  [4]float32
-	white [4]float32
-	t     float32
+	cam    *scene.OrthoCamera2D
+	ctrl   *scene.OrthoController2D
+	r2d    *renderer2d.Renderer2D
+	tex    core.Texture
+	player renderer2d.SubTexture2D
+	red    [4]float32
+	green  [4]float32
+	blue   [4]float32
+	white  [4]float32
+	t      float32
 }
 
 func (l *Layer2D) OnAttach(e *core.Engine) {
@@ -83,12 +84,14 @@ func (l *Layer2D) OnAttach(e *core.Engine) {
 		Pixels:    pixels,
 		MinFilter: "nearest",
 		MagFilter: "nearest",
-		WrapU:     "repeat",
-		WrapV:     "repeat",
+		WrapU:     "clamp",
+		WrapV:     "clamp",
 	})
 	if err != nil {
 		panic(err)
 	}
+
+	l.player = renderer2d.FromPixels(l.tex, 0, 0, 32, 32, w, h)
 
 	l.red = [4]float32{1, 0.2, 0.2, 1}
 	l.green = [4]float32{0.2, 1, 0.2, 1}
@@ -121,7 +124,8 @@ func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 	}
 
 	tint := [4]float32{1, 1, 1, 1}
-	l.r2d.DrawTexturedQuad(0, 0, 384, 704, l.tex, tint, 0)
+	// l.r2d.DrawTexturedQuad(0, 0, 384, 704, l.tex, tint, 0)
+	l.r2d.DrawSubTexQuad(0, 0, 32, 32, l.player, tint, l.t)
 
 	l.r2d.EndScene()
 }

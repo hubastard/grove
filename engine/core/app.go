@@ -128,31 +128,16 @@ type EventKey struct {
 
 func (EventKey) isEvent() {}
 
+type EventMouseButton struct {
+	Button MouseButton
+	Down   bool
+}
+
+func (EventMouseButton) isEvent() {}
+
 type EventMouseMove struct{ X, Y float64 }
 
 func (EventMouseMove) isEvent() {}
-
-type Key int
-
-const (
-	KeyUnknown Key = iota
-	KeyEscape
-	KeySpace
-	KeyW
-	KeyA
-	KeyS
-	KeyD
-)
-
-type Mod int
-
-const (
-	ModNone  Mod = 0
-	ModShift Mod = 1 << 0
-	ModCtrl  Mod = 1 << 1
-	ModAlt   Mod = 1 << 2
-	ModSuper Mod = 1 << 3
-)
 
 // Config for the engine run.
 type Config struct {

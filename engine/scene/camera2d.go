@@ -103,9 +103,14 @@ func ortho(l, r, b, t, n, f float32) [16]float32 {
 
 func mul(a, b [16]float32) [16]float32 {
 	var out [16]float32
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 4; j++ {
-			out[i+4*j] = a[0+4*j]*b[i+0] + a[1+4*j]*b[i+4] + a[2+4*j]*b[i+8] + a[3+4*j]*b[i+12]
+	for col := 0; col < 4; col++ {
+		colOffset := col * 4
+		for row := 0; row < 4; row++ {
+			sum := float32(0)
+			for k := 0; k < 4; k++ {
+				sum += a[k*4+row] * b[colOffset+k]
+			}
+			out[colOffset+row] = sum
 		}
 	}
 	return out

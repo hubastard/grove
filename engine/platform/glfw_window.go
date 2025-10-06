@@ -62,6 +62,10 @@ func NewGLFWWindow(cfg core.Config, onEvent func(core.Event)) (*GLFWWindow, erro
 		}
 		gw.emit(core.EventKey{Key: k, Down: action != glfw.Release, Mods: translateMods(mods)})
 	})
+	win.SetMouseButtonCallback(func(_ *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
+		b := translateMouseButton(button)
+		gw.emit(core.EventMouseButton{Button: b, Down: action != glfw.Release})
+	})
 	win.SetScrollCallback(func(_ *glfw.Window, xoff, yoff float64) {
 		gw.emit(core.EventScroll{Xoff: xoff, Yoff: yoff})
 	})
@@ -84,22 +88,13 @@ func (g *GLFWWindow) SetTitle(t string)                    { g.w.SetTitle(t) }
 func (g *GLFWWindow) SetEventCallback(cb func(core.Event)) { g.onEv = cb }
 
 func translateKey(k glfw.Key) core.Key {
-	switch k {
-	case glfw.KeyEscape:
-		return core.KeyEscape
-	case glfw.KeySpace:
-		return core.KeySpace
-	case glfw.KeyW:
-		return core.KeyW
-	case glfw.KeyA:
-		return core.KeyA
-	case glfw.KeyS:
-		return core.KeyS
-	case glfw.KeyD:
-		return core.KeyD
-	default:
-		return core.KeyUnknown
-	}
+	// For simplicity, we use GLFW key codes as-is. So we can cast directly.
+	return core.Key(k)
+}
+
+func translateMouseButton(button glfw.MouseButton) core.MouseButton {
+	// For simplicity, we use GLFW mouse button as-is. So we can cast directly.
+	return core.MouseButton(button)
 }
 
 func translateMods(m glfw.ModifierKey) core.Mod {
@@ -115,6 +110,12 @@ func translateMods(m glfw.ModifierKey) core.Mod {
 	}
 	if m&glfw.ModSuper != 0 {
 		out |= core.ModSuper
+	}
+	if m&glfw.ModCapsLock != 0 {
+		out |= core.ModCapsLock
+	}
+	if m&glfw.ModNumLock != 0 {
+		out |= core.ModNumLock
 	}
 	return out
 }

@@ -22,7 +22,7 @@ func NewOrthoController2D(cam *OrthoCamera2D) *OrthoController2D {
 func (cc *OrthoController2D) Update(e *core.Engine, dt float32) {
 	in := e.Input
 	speed := cc.MoveSpeed * dt
-	// rotSpeed := cc.RotSpeed * dt
+	rotSpeed := cc.RotSpeed * dt
 
 	if in.IsKeyDown(core.KeyW) {
 		cc.Camera.Move(0, speed)
@@ -39,12 +39,20 @@ func (cc *OrthoController2D) Update(e *core.Engine, dt float32) {
 
 	// Q/E rotate (optional)
 	// map Q/E to your Key enum as needed; if not present, omit rotation controls
-	// if in.IsKeyDown(core.KeyQ) { cc.Camera.Rotate(rotSpeed) }
-	// if in.IsKeyDown(core.KeyE) { cc.Camera.Rotate(-rotSpeed) }
+	if in.IsKeyDown(core.KeyQ) {
+		cc.Camera.Rotate(rotSpeed)
+	}
+	if in.IsKeyDown(core.KeyE) {
+		cc.Camera.Rotate(-rotSpeed)
+	}
 
 	// Zoom via Z/X (discrete)
-	// if in.IsKeyDown(core.KeyZ) { cc.Camera.SetZoom(cc.Camera.Zoom / cc.ZoomSpeed) }
-	// if in.IsKeyDown(core.KeyX) { cc.Camera.SetZoom(cc.Camera.Zoom * cc.ZoomSpeed) }
+	if in.IsKeyDown(core.KeyZ) {
+		cc.Camera.SetZoom(cc.Camera.Zoom / cc.ZoomSpeed)
+	}
+	if in.IsKeyDown(core.KeyX) {
+		cc.Camera.SetZoom(cc.Camera.Zoom * cc.ZoomSpeed)
+	}
 }
 
 func (cc *OrthoController2D) HandleEvent(e *core.Engine, ev core.Event) bool {
