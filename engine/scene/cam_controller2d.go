@@ -46,3 +46,19 @@ func (cc *OrthoController2D) Update(e *core.Engine, dt float32) {
 	// if in.IsKeyDown(core.KeyZ) { cc.Camera.SetZoom(cc.Camera.Zoom / cc.ZoomSpeed) }
 	// if in.IsKeyDown(core.KeyX) { cc.Camera.SetZoom(cc.Camera.Zoom * cc.ZoomSpeed) }
 }
+
+func (cc *OrthoController2D) HandleEvent(e *core.Engine, ev core.Event) bool {
+	switch s := ev.(type) {
+	case core.EventScroll:
+		// Zoom towards positive Y scroll = zoom in
+		scale := float32(1.0)
+		if s.Yoff > 0 {
+			scale = 1.0 / cc.ZoomSpeed
+		} else if s.Yoff < 0 {
+			scale = cc.ZoomSpeed
+		}
+		cc.Camera.SetZoom(cc.Camera.Zoom * scale)
+		return true
+	}
+	return false
+}

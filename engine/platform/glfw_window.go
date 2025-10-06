@@ -62,6 +62,9 @@ func NewGLFWWindow(cfg core.Config, onEvent func(core.Event)) (*GLFWWindow, erro
 		}
 		gw.emit(core.EventKey{Key: k, Down: action != glfw.Release, Mods: translateMods(mods)})
 	})
+	win.SetScrollCallback(func(_ *glfw.Window, xoff, yoff float64) {
+		gw.emit(core.EventScroll{Xoff: xoff, Yoff: yoff})
+	})
 
 	return gw, nil
 }

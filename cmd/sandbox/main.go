@@ -42,6 +42,7 @@ type Layer2D struct {
 	cam   *scene.OrthoCamera2D
 	ctrl  *scene.OrthoController2D
 	r2d   *renderer2d.Renderer2D
+	tex   core.Texture
 	red   [4]float32
 	green [4]float32
 	blue  [4]float32
@@ -70,6 +71,25 @@ func (l *Layer2D) OnAttach(e *core.Engine) {
 		panic(err)
 	}
 
+	w, h, pixels, err := assets.LoadPNG("player.png")
+	if err != nil {
+		panic(err)
+	}
+
+	l.tex, err = e.Renderer.CreateTexture(core.TextureDesc{
+		Width:     w,
+		Height:    h,
+		Format:    core.TextureRGBA8,
+		Pixels:    pixels,
+		MinFilter: "nearest",
+		MagFilter: "nearest",
+		WrapU:     "repeat",
+		WrapV:     "repeat",
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	l.red = [4]float32{1, 0.2, 0.2, 1}
 	l.green = [4]float32{0.2, 1, 0.2, 1}
 	l.blue = [4]float32{0.2, 0.2, 1, 1}
@@ -87,7 +107,7 @@ func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 	vp := l.cam.VP()
 	l.r2d.BeginScene(vp)
 
-	// Draw a grid of quads for a nice view
+	// grid of colored quads
 	for y := -3; y <= 3; y++ {
 		for x := -5; x <= 5; x++ {
 			col := l.white
@@ -99,8 +119,9 @@ func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 			l.r2d.DrawQuad(float32(x*100), float32(y*100), 90, 90, col, 0)
 		}
 	}
-	// animated red quad
-	l.r2d.DrawQuad(0, 0, 180, 180, l.red, l.t*0.8)
+
+	tint := [4]float32{1, 1, 1, 1}
+	l.r2d.DrawTexturedQuad(0, 0, 384, 704, l.tex, tint, 0)
 
 	l.r2d.EndScene()
 }
@@ -109,7 +130,10 @@ func (l *Layer2D) OnEvent(e *core.Engine, ev core.Event) bool {
 	switch v := ev.(type) {
 	case core.EventResize:
 		l.cam.SetViewportPixels(v.W, v.H)
-		return false
+	case core.EventScroll:
+		if l.ctrl.HandleEvent(e, ev) {
+			return true
+		}
 	}
 	return false
 }

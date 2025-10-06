@@ -116,6 +116,10 @@ type EventResize struct{ W, H int }
 
 func (EventResize) isEvent() {}
 
+type EventScroll struct{ Xoff, Yoff float64 }
+
+func (EventScroll) isEvent() {}
+
 type EventKey struct {
 	Key  Key
 	Down bool
