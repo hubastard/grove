@@ -9,11 +9,36 @@ import (
 	"github.com/hubastard/grove/engine/core"
 )
 
+// ---------- GL handles implementing core.Mesh / core.Pipeline / core.Texture ----------
+
+type meshGL struct {
+	vao  uint32
+	vbo  uint32
+	ebo  uint32 // 0 if none
+	nIdx int
+	nVtx int
+}
+
+func (meshGL) IsMesh() {}
+
+type pipeGL struct {
+	prog      uint32
+	depthTest bool
+	blend     bool
+}
+
+func (pipeGL) IsPipeline() {}
+
+type texGL struct {
+	id   uint32
+	unit int // texture unit to bind to (we'll assign on the fly)
+	w, h int
+}
+
+func (texGL) IsTexture() {}
+
 type RendererGL struct {
-	win     core.Window
-	program uint32
-	vao     uint32
-	vbo     uint32
+	win core.Window
 }
 
 func NewRendererGL(win core.Window, _ core.Config) (*RendererGL, error) {
@@ -25,94 +50,162 @@ func NewRendererGL(win core.Window, _ core.Config) (*RendererGL, error) {
 }
 
 func (r *RendererGL) Init() error {
-	// Create simple shader program
-	var err error
-	r.program, err = makeProgram(vertexSource, fragmentSource)
-	if err != nil {
-		return err
-	}
-
-	// Triangle vertices: pos (x,y), color (r,g,b)
-	verts := []float32{
-		//  X,     Y,     R,   G,   B
-		0.0, 0.6, 1.0, 0.2, 0.2,
-		-0.6, -0.6, 0.2, 1.0, 0.2,
-		0.6, -0.6, 0.2, 0.2, 1.0,
-	}
-
-	gl.GenVertexArrays(1, &r.vao)
-	gl.BindVertexArray(r.vao)
-
-	gl.GenBuffers(1, &r.vbo)
-	gl.BindBuffer(gl.ARRAY_BUFFER, r.vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, int(len(verts))*4, gl.Ptr(verts), gl.STATIC_DRAW)
-
-	// layout(location = 0) in vec2 aPos;
-	// layout(location = 1) in vec3 aColor;
-	const stride = 5 * 4 // bytes
-	gl.EnableVertexAttribArray(0)
-	gl.VertexAttribPointer(0, 2, gl.FLOAT, false, stride, unsafe.Pointer(uintptr(0)))
-	gl.EnableVertexAttribArray(1)
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, stride, unsafe.Pointer(uintptr(2*4)))
-
-	gl.BindVertexArray(0)
-	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
-
-	// Enable depth (not necessary for the triangle, but good default)
-	gl.Enable(gl.DEPTH_TEST)
+	gl.Enable(gl.DEPTH_TEST) // default on
 	return nil
 }
-
-func (r *RendererGL) Shutdown() {
-	if r.vbo != 0 {
-		gl.DeleteBuffers(1, &r.vbo)
-	}
-	if r.vao != 0 {
-		gl.DeleteVertexArrays(1, &r.vao)
-	}
-	if r.program != 0 {
-		gl.DeleteProgram(r.program)
-	}
-}
-
-func (r *RendererGL) Resize(w, h int) {
-	gl.Viewport(0, 0, int32(w), int32(h))
-}
+func (r *RendererGL) Shutdown()       {}
+func (r *RendererGL) Resize(w, h int) { gl.Viewport(0, 0, int32(w), int32(h)) }
 
 func (r *RendererGL) Clear(rf, gf, bf, af float32) {
 	gl.ClearColor(rf, gf, bf, af)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 }
 
-func (r *RendererGL) DrawDemoTriangle() {
-	gl.UseProgram(r.program)
-	gl.BindVertexArray(r.vao)
-	gl.DrawArrays(gl.TRIANGLES, 0, 3)
+func (r *RendererGL) CreateMesh(desc core.MeshDesc) (core.Mesh, error) {
+	var vao, vbo, ebo uint32
+	gl.GenVertexArrays(1, &vao)
+	gl.BindVertexArray(vao)
+
+	gl.GenBuffers(1, &vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	gl.BufferData(gl.ARRAY_BUFFER, len(desc.Vertices)*4, gl.Ptr(desc.Vertices), gl.STATIC_DRAW)
+
+	if len(desc.Indices) > 0 {
+		gl.GenBuffers(1, &ebo)
+		gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
+		gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(desc.Indices)*4, gl.Ptr(desc.Indices), gl.STATIC_DRAW)
+	}
+
+	for _, a := range desc.Layout.Attributes {
+		if a.Type != core.AttribFloat32 {
+			return nil, fmt.Errorf("unsupported attrib type")
+		}
+		gl.EnableVertexAttribArray(uint32(a.Location))
+		gl.VertexAttribPointer(uint32(a.Location), int32(a.Size), gl.FLOAT, false, int32(desc.Layout.Stride), unsafe.Pointer(uintptr(a.Offset)))
+	}
+
+	// Keep EBO bound to VAO association
+	gl.BindVertexArray(0)
+	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
+
+	nVtx := 0
+	if desc.Layout.Stride > 0 && len(desc.Vertices) > 0 && len(desc.Indices) == 0 {
+		nVtx = len(desc.Vertices) * 4 / desc.Layout.Stride
+	}
+	m := &meshGL{vao: vao, vbo: vbo, ebo: ebo, nIdx: len(desc.Indices), nVtx: nVtx}
+	return m, nil
+}
+
+func (r *RendererGL) CreatePipeline(desc core.PipelineDesc) (core.Pipeline, error) {
+	prog, err := makeProgram(desc.VertexSource, desc.FragmentSource)
+	if err != nil {
+		return nil, err
+	}
+	return &pipeGL{prog: prog, depthTest: desc.DepthTest, blend: desc.Blend}, nil
+}
+
+func (r *RendererGL) CreateTexture(desc core.TextureDesc) (core.Texture, error) {
+	var id uint32
+	gl.GenTextures(1, &id)
+	gl.BindTexture(gl.TEXTURE_2D, id)
+
+	// Params
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, toGLFilter(desc.MinFilter))
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, toGLFilter(desc.MagFilter))
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, toGLWrap(desc.WrapU))
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, toGLWrap(desc.WrapV))
+
+	// Data
+	if desc.Format != core.TextureRGBA8 {
+		return nil, fmt.Errorf("only RGBA8 supported for now")
+	}
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, int32(desc.Width), int32(desc.Height), 0, gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(desc.Pixels))
+	// No mipmaps for simplicity (use MIN_FILTER=linear/nearest); add gl.GenerateMipmap if you want
+
+	gl.BindTexture(gl.TEXTURE_2D, 0)
+	return &texGL{id: id, w: desc.Width, h: desc.Height}, nil
+}
+
+func toGLFilter(f string) int32 {
+	switch f {
+	case "linear":
+		return gl.LINEAR
+	default:
+		return gl.NEAREST
+	}
+}
+func toGLWrap(w string) int32 {
+	switch w {
+	case "repeat":
+		return gl.REPEAT
+	default:
+		return gl.CLAMP_TO_EDGE
+	}
+}
+
+func (r *RendererGL) Draw(cmd core.DrawCmd) {
+	p := cmd.Pipe.(*pipeGL)
+	m := cmd.Mesh.(*meshGL)
+
+	// state
+	if p.depthTest {
+		gl.Enable(gl.DEPTH_TEST)
+	} else {
+		gl.Disable(gl.DEPTH_TEST)
+	}
+	if p.blend {
+		gl.Enable(gl.BLEND)
+		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	} else {
+		gl.Disable(gl.BLEND)
+	}
+
+	gl.UseProgram(p.prog)
+
+	// uniforms (minimal)
+	for name, v := range cmd.Uniforms {
+		switch name {
+		case "uMVP":
+			if mat, ok := v.([16]float32); ok {
+				loc := gl.GetUniformLocation(p.prog, gl.Str("uMVP\x00"))
+				if loc >= 0 {
+					gl.UniformMatrix4fv(loc, 1, false, &mat[0])
+				}
+			}
+		}
+	}
+
+	// samplers: bind textures to units 0..N in stable order of iteration
+	unit := 0
+	for name, t := range cmd.Samplers {
+		tx := t.(*texGL)
+		gl.ActiveTexture(uint32(gl.TEXTURE0 + unit))
+		gl.BindTexture(gl.TEXTURE_2D, tx.id)
+
+		// assign sampler uniform to this unit
+		loc := gl.GetUniformLocation(p.prog, gl.Str((name + "\x00")))
+		if loc >= 0 {
+			gl.Uniform1i(loc, int32(unit))
+		}
+		unit++
+	}
+	// NOTE: we don't unbind here; next draw will overwrite bindings
+
+	gl.BindVertexArray(m.vao)
+	if m.ebo != 0 && m.nIdx > 0 {
+		gl.DrawElements(gl.TRIANGLES, int32(m.nIdx), gl.UNSIGNED_INT, unsafe.Pointer(uintptr(0)))
+	} else {
+		count := m.nVtx
+		if cmd.Count > 0 {
+			count = cmd.Count
+		}
+		gl.DrawArrays(gl.TRIANGLES, 0, int32(count))
+	}
 	gl.BindVertexArray(0)
 	gl.UseProgram(0)
 }
 
-// --- Shader utilities ---
-
-const vertexSource = `
-#version 330 core
-layout(location=0) in vec2 aPos;
-layout(location=1) in vec3 aColor;
-out vec3 vColor;
-void main() {
-    vColor = aColor;
-    gl_Position = vec4(aPos, 0.0, 1.0);
-}
-` + "\x00"
-
-const fragmentSource = `
-#version 330 core
-in vec3 vColor;
-out vec4 FragColor;
-void main() {
-    FragColor = vec4(vColor, 1.0);
-}
-` + "\x00"
+// ------------ shader helpers ------------
 
 func makeShader(src string, shaderType uint32) (uint32, error) {
 	sh := gl.CreateShader(shaderType)

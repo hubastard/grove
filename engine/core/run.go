@@ -29,6 +29,17 @@ func Run(app App, cfg Config, newWindow func(Config) (Window, error), newRendere
 	rend.Resize(w, h)
 
 	eng := &Engine{Window: win, Renderer: rend, start: time.Now()}
+	win.SetEventCallback(func(ev Event) {
+		app.OnEvent(eng, ev)
+		if _, ok := ev.(EventResize); ok {
+			fw, fh := win.FramebufferSize()
+			if fw < 1 || fh < 1 {
+				return
+			}
+			rend.Resize(fw, fh)
+		}
+	})
+
 	app.OnStart(eng)
 
 	// Fixed-timestep (60 Hz) with interpolation
