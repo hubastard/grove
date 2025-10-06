@@ -145,6 +145,7 @@ type Config struct {
 	Title      string
 	Width      int
 	Height     int
+	TickPerSec int // default: 60
 	VSync      bool
 	ClearColor [4]float32 // RGBA
 }

@@ -46,8 +46,13 @@ func Run(app App, cfg Config, newWindow func(Config) (Window, error), newRendere
 	app.OnStart(eng)
 	eng.Layers.ForEach(func(l Layer) { l.OnAttach(eng) })
 
-	// Fixed-timestep (60 Hz) with interpolation
-	const tick = time.Second / 60
+	// Fixed-timestep (default 60 Hz) with interpolation
+	tps := time.Duration(60)
+	if cfg.TickPerSec > 0 {
+		tps = time.Duration(cfg.TickPerSec)
+	}
+
+	tick := time.Second / tps
 	var (
 		accum   time.Duration
 		prev    = time.Now()
