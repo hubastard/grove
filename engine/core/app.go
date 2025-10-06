@@ -14,6 +14,8 @@ type App interface {
 type Engine struct {
 	Window   Window
 	Renderer Renderer
+	Input    *Input
+	Layers   LayerStack
 	start    time.Time
 }
 

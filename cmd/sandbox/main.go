@@ -3,177 +3,127 @@ package main
 import (
 	"fmt"
 	"log"
-	"math"
 	"time"
 
+	"github.com/hubastard/grove/engine/assets"
 	"github.com/hubastard/grove/engine/core"
 	glbackend "github.com/hubastard/grove/engine/gfx/gl"
+	"github.com/hubastard/grove/engine/gfx/renderer2d"
 	"github.com/hubastard/grove/engine/platform"
+	"github.com/hubastard/grove/engine/scene"
 )
 
-type SampleApp struct {
-	frames       int
-	lastFPSTitle time.Time
-
-	mesh  core.Mesh
-	pipe  core.Pipeline
-	tex   core.Texture
-	angle float32
+type App struct {
+	lastTitle time.Time
+	frames    int
 }
 
-func (a *SampleApp) OnStart(e *core.Engine) {
-	log.Println("App start")
-	a.lastFPSTitle = time.Now()
-
-	// --- shaders (GLSL 330 core) ---
-	vs := `#version 330 core
-layout(location=0) in vec2 aPos;
-layout(location=1) in vec3 aColor;
-layout(location=2) in vec2 aUV;
-uniform mat4 uMVP;
-out vec3 vColor;
-out vec2 vUV;
-void main(){
-    vColor = aColor;
-    vUV = aUV;
-    gl_Position = uMVP * vec4(aPos, 0.0, 1.0);
-}` + "\x00"
-
-	fs := `#version 330 core
-in vec3 vColor;
-in vec2 vUV;
-out vec4 FragColor;
-uniform sampler2D uTex0;
-void main(){
-    vec4 tex = texture(uTex0, vUV);
-    FragColor = tex * vec4(vColor, 1.0);
-}` + "\x00"
-
-	var err error
-	a.pipe, err = e.Renderer.CreatePipeline(core.PipelineDesc{
-		VertexSource: vs, FragmentSource: fs,
-		DepthTest: false, Blend: true,
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	// --- quad mesh (pos2, color3, uv2) + indices ---
-	//   (-0.5,0.5)  (0.5,0.5)
-	//       0---------1
-	//       |       / |
-	//       |     /   |
-	//       |   /     |
-	//       2---------3
-	//   (-0.5,-0.5) (0.5,-0.5)
-	verts := []float32{
-		//   x,    y,   r,   g,   b,   u,   v
-		-0.5, 0.5, 1.0, 0.8, 0.8, 0.0, 0.0, // 0
-		0.5, 0.5, 0.8, 1.0, 0.8, 1.0, 0.0, // 1
-		-0.5, -0.5, 0.8, 0.8, 1.0, 0.0, 1.0, // 2
-		0.5, -0.5, 1.0, 1.0, 1.0, 1.0, 1.0, // 3
-	}
-	indices := []uint32{0, 2, 1, 1, 2, 3}
-	layout := core.VertexLayout{
-		Stride: 7 * 4,
-		Attributes: []core.VertexAttrib{
-			{Location: 0, Size: 2, Type: core.AttribFloat32, Offset: 0},
-			{Location: 1, Size: 3, Type: core.AttribFloat32, Offset: 2 * 4},
-			{Location: 2, Size: 2, Type: core.AttribFloat32, Offset: 5 * 4},
-		},
-	}
-	a.mesh, err = e.Renderer.CreateMesh(core.MeshDesc{
-		Vertices: verts,
-		Indices:  indices,
-		Layout:   layout,
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	// --- procedural checkerboard texture (RGBA8) ---
-	w, h := 64, 64
-	pix := make([]byte, w*h*4)
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			i := (y*w + x) * 4
-			// 8x8 checker
-			if ((x/8)+(y/8))%2 == 0 {
-				pix[i+0] = 230
-				pix[i+1] = 230
-				pix[i+2] = 230
-				pix[i+3] = 255
-			} else {
-				pix[i+0] = 30
-				pix[i+1] = 30
-				pix[i+2] = 30
-				pix[i+3] = 255
-			}
-		}
-	}
-	a.tex, err = e.Renderer.CreateTexture(core.TextureDesc{
-		Width: w, Height: h,
-		Format:    core.TextureRGBA8,
-		Pixels:    pix,
-		MinFilter: "nearest",
-		MagFilter: "nearest",
-		WrapU:     "repeat",
-		WrapV:     "repeat",
-	})
-	if err != nil {
-		panic(err)
-	}
+func (a *App) OnStart(e *core.Engine) {
+	// push the 2D demo layer
+	e.Layers.Push(&Layer2D{})
 }
 
-func (a *SampleApp) OnShutdown(e *core.Engine) { log.Println("App shutdown") }
-
-func (a *SampleApp) OnUpdate(e *core.Engine, dt float64) {
+func (a *App) OnUpdate(e *core.Engine, dt float64) {
 	a.frames++
-	if time.Since(a.lastFPSTitle) >= time.Second {
-		elapsed := time.Since(a.lastFPSTitle).Seconds()
+	if time.Since(a.lastTitle) >= time.Second {
+		elapsed := time.Since(a.lastTitle).Seconds()
 		fps := float64(a.frames) / elapsed
 		e.Window.SetTitle(fmt.Sprintf("Go Engine — ~%.0f FPS", fps))
 		a.frames = 0
-		a.lastFPSTitle = time.Now()
+		a.lastTitle = time.Now()
 	}
-	// spin slowly
-	a.angle += float32(dt) * 1.5
+}
+func (a *App) OnRender(e *core.Engine, alpha float64) {}
+func (a *App) OnEvent(e *core.Engine, ev core.Event)  {}
+func (a *App) OnShutdown(e *core.Engine)              {}
+
+// ------- A simple 2D Layer demo -------
+type Layer2D struct {
+	cam   *scene.OrthoCamera2D
+	ctrl  *scene.OrthoController2D
+	r2d   *renderer2d.Renderer2D
+	red   [4]float32
+	green [4]float32
+	blue  [4]float32
+	white [4]float32
+	t     float32
 }
 
-func (a *SampleApp) OnRender(e *core.Engine, alpha float64) {
-	mvp := rotZ(a.angle)
-	e.Renderer.Draw(core.DrawCmd{
-		Pipe:     a.pipe,
-		Mesh:     a.mesh,
-		Uniforms: map[string]any{"uMVP": mvp},
-		Samplers: map[string]core.Texture{"uTex0": a.tex},
-	})
-	_ = alpha
+func (l *Layer2D) OnAttach(e *core.Engine) {
+	// Camera sized to framebuffer
+	w, h := e.Window.FramebufferSize()
+	l.cam = scene.NewOrtho2D(w, h)
+	l.ctrl = scene.NewOrthoController2D(l.cam)
+
+	// Load 2D shader
+	vs, err := assets.LoadShader("renderer2d.vert")
+	if err != nil {
+		panic(err)
+	}
+	fs, err := assets.LoadShader("renderer2d.frag")
+	if err != nil {
+		panic(err)
+	}
+
+	l.r2d, err = renderer2d.New(e.Renderer, vs, fs, 10000)
+	if err != nil {
+		panic(err)
+	}
+
+	l.red = [4]float32{1, 0.2, 0.2, 1}
+	l.green = [4]float32{0.2, 1, 0.2, 1}
+	l.blue = [4]float32{0.2, 0.2, 1, 1}
+	l.white = [4]float32{1, 1, 1, 1}
 }
 
-func (a *SampleApp) OnEvent(e *core.Engine, ev core.Event) {
-	// Resize is already handled centrally in core.Run, so we just log if desired
-	switch v := ev.(type) {
-	case core.EventKey:
-		if v.Key == core.KeyEscape && v.Down {
-			log.Println("ESC pressed — close the window to exit")
+func (l *Layer2D) OnDetach(e *core.Engine) {}
+
+func (l *Layer2D) OnUpdate(e *core.Engine, dt float64) {
+	l.ctrl.Update(e, float32(dt))
+	l.t += float32(dt)
+}
+
+func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
+	vp := l.cam.VP()
+	l.r2d.BeginScene(vp)
+
+	// Draw a grid of quads for a nice view
+	for y := -3; y <= 3; y++ {
+		for x := -5; x <= 5; x++ {
+			col := l.white
+			if (x+y)%2 == 0 {
+				col = l.blue
+			} else {
+				col = l.green
+			}
+			l.r2d.DrawQuad(float32(x*100), float32(y*100), 90, 90, col, 0)
 		}
-	case core.EventResize:
-		log.Printf("Resize: %dx%d", v.W, v.H)
 	}
+	// animated red quad
+	l.r2d.DrawQuad(0, 0, 180, 180, l.red, l.t*0.8)
+
+	l.r2d.EndScene()
+}
+
+func (l *Layer2D) OnEvent(e *core.Engine, ev core.Event) bool {
+	switch v := ev.(type) {
+	case core.EventResize:
+		l.cam.SetViewportPixels(v.W, v.H)
+		return false
+	}
+	return false
 }
 
 func main() {
 	cfg := core.Config{
-		Title: "Go Engine",
+		Title: "Go Engine (2D)",
 		Width: 1280, Height: 720,
 		VSync:      true,
 		ClearColor: [4]float32{0.08, 0.10, 0.12, 1},
 	}
-	app := &SampleApp{}
+	app := &App{}
 
 	newWindow := func(cfg core.Config) (core.Window, error) {
-		// engine will attach event sink later
 		return platform.NewGLFWWindow(cfg, nil)
 	}
 	newRenderer := func(win core.Window, cfg core.Config) (core.Renderer, error) {
@@ -181,19 +131,6 @@ func main() {
 	}
 
 	if err := core.Run(app, cfg, newWindow, newRenderer); err != nil {
-		panic(err)
-	}
-	time.Sleep(50 * time.Millisecond)
-}
-
-// Simple Z-rotation 4x4 column-major matrix suitable for GLSL
-func rotZ(a float32) [16]float32 {
-	c := float32(math.Cos(float64(a)))
-	s := float32(math.Sin(float64(a)))
-	return [16]float32{
-		c, s, 0, 0,
-		-s, c, 0, 0,
-		0, 0, 1, 0,
-		0, 0, 0, 1,
+		log.Fatal(err)
 	}
 }

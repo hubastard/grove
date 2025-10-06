@@ -172,6 +172,13 @@ func (r *RendererGL) Draw(cmd core.DrawCmd) {
 					gl.UniformMatrix4fv(loc, 1, false, &mat[0])
 				}
 			}
+		case "uVP":
+			if mat, ok := v.([16]float32); ok {
+				loc := gl.GetUniformLocation(p.prog, gl.Str("uVP\x00"))
+				if loc >= 0 {
+					gl.UniformMatrix4fv(loc, 1, false, &mat[0])
+				}
+			}
 		}
 	}
 

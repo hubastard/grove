@@ -15,9 +15,6 @@ func Run(app App, cfg Config, newWindow func(Config) (Window, error), newRendere
 	if err != nil {
 		return err
 	}
-	defer func() {
-		// window owns context; renderer shuts down first (below)
-	}()
 
 	rend, err := newRenderer(win, cfg)
 	if err != nil {
@@ -25,12 +22,18 @@ func Run(app App, cfg Config, newWindow func(Config) (Window, error), newRendere
 	}
 	defer rend.Shutdown()
 
+	eng := &Engine{Window: win, Renderer: rend, Input: NewInput(), start: time.Now()}
+
+	// authoritative initial size
 	w, h := win.FramebufferSize()
 	rend.Resize(w, h)
 
-	eng := &Engine{Window: win, Renderer: rend, start: time.Now()}
 	win.SetEventCallback(func(ev Event) {
+		eng.Input.Handle(ev)
+		eng.Layers.ForEachReverse(func(l Layer) bool { return l.OnEvent(eng, ev) })
 		app.OnEvent(eng, ev)
+
+		// engine-level resize
 		if _, ok := ev.(EventResize); ok {
 			fw, fh := win.FramebufferSize()
 			if fw < 1 || fh < 1 {
@@ -41,6 +44,7 @@ func Run(app App, cfg Config, newWindow func(Config) (Window, error), newRendere
 	})
 
 	app.OnStart(eng)
+	eng.Layers.ForEach(func(l Layer) { l.OnAttach(eng) })
 
 	// Fixed-timestep (60 Hz) with interpolation
 	const tick = time.Second / 60
@@ -64,6 +68,7 @@ func Run(app App, cfg Config, newWindow func(Config) (Window, error), newRendere
 		steps := 0
 		for accum >= tick && steps < maxStep {
 			app.OnUpdate(eng, float64(tick)/float64(time.Second))
+			eng.Layers.ForEach(func(l Layer) { l.OnUpdate(eng, float64(tick)/float64(time.Second)) })
 			accum -= tick
 			steps++
 		}
@@ -73,11 +78,13 @@ func Run(app App, cfg Config, newWindow func(Config) (Window, error), newRendere
 		// Render
 		rend.Clear(clear[0], clear[1], clear[2], clear[3])
 		app.OnRender(eng, alpha)
+		eng.Layers.ForEach(func(l Layer) { l.OnRender(eng, alpha) })
 
 		// Present
 		win.SwapBuffers()
 	}
 
+	eng.Layers.ForEach(func(l Layer) { l.OnDetach(eng) })
 	app.OnShutdown(eng)
 	log.Println("Engine exit")
 	return nil
