@@ -5,7 +5,7 @@ import "github.com/hubastard/grove/engine/gfx/renderer2d"
 // DrawText draws s with baseline origin (x,y). Positive Y goes downward (matching the 2D projection).
 func DrawText(r2d *renderer2d.Renderer2D, atlas *FontAtlas, x, y float32, s string, color [4]float32) {
 	penX := x
-	baseY := y
+	baseY := y + atlas.Ascent // move origin to top left
 	var prev rune = -1
 
 	for _, r := range s {
