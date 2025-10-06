@@ -14,6 +14,18 @@ const vStride = 9
 const vertsPerQuad = 4
 const indsPerQuad = 6
 
+// Statistics captures the counts generated during a renderer frame.
+type Statistics struct {
+	DrawCalls int
+	QuadCount int
+}
+
+// TotalVertexCount reports vertices submitted this frame.
+func (s Statistics) TotalVertexCount() int { return s.QuadCount * vertsPerQuad }
+
+// TotalIndexCount reports indices submitted this frame.
+func (s Statistics) TotalIndexCount() int { return s.QuadCount * indsPerQuad }
+
 type Renderer2D struct {
 	r      core.Renderer
 	pipe   core.Pipeline
@@ -26,7 +38,8 @@ type Renderer2D struct {
 	quadCount int
 	maxQuads  int
 
-	_vp [16]float32
+	_vp   [16]float32
+	stats Statistics
 }
 
 // New creates renderer and compiles the shader pipeline.
@@ -67,39 +80,38 @@ func New(r core.Renderer, vertSrc, fragSrc string, maxQuads int) (*Renderer2D, e
 
 func (rd *Renderer2D) BeginScene(vp [16]float32) {
 	rd._vp = vp
-	rd.verts = rd.verts[:0]
-	rd.inds = rd.inds[:0]
-	rd.quadCount = 0
-
-	// reset texture array; slot 0 reserved for white
-	for i := range rd.texArr {
-		rd.texArr[i] = nil
-	}
-	rd.texArr[0] = rd.white
-	rd.texCnt = 1
+	rd.stats = Statistics{}
+	rd.resetBatch()
 }
 
 func (rd *Renderer2D) EndScene() { rd.flush() }
 
+// Stats returns the current frame statistics snapshot.
+func (rd *Renderer2D) Stats() Statistics { return rd.stats }
+
 // Draw solid color quad (uses white texture in slot 0)
 func (rd *Renderer2D) DrawQuad(x, y, w, h float32, color [4]float32, rotationRad float32) {
+	rd.ensureQuadCapacity()
 	rd.drawQuadInternal(x, y, w, h, color, rotationRad, rd.texSlot(rd.white), 0, 0, 1, 1)
 }
 
 // Draw textured quad with UVs (tint color)
 func (rd *Renderer2D) DrawTexturedQuad(x, y, w, h float32, tex core.Texture, tint [4]float32, rotationRad float32) {
+	rd.ensureQuadCapacity()
 	slot := rd.texSlot(tex)
 	rd.drawQuadInternal(x, y, w, h, tint, rotationRad, slot, 0, 0, 1, 1)
 }
 
 // Draw textured sub-rect (UV rect: u0,v0 -> u1,v1)
 func (rd *Renderer2D) DrawTexturedQuadUV(x, y, w, h float32, tex core.Texture, tint [4]float32, rotationRad float32, u0, v0, u1, v1 float32) {
+	rd.ensureQuadCapacity()
 	slot := rd.texSlot(tex)
 	rd.drawQuadInternal(x, y, w, h, tint, rotationRad, slot, u0, v0, u1, v1)
 }
 
 // DrawSubTexQuad draws a quad using a SubTexture2D (tint + rotation optional).
 func (rd *Renderer2D) DrawSubTexQuad(x, y, w, h float32, sub SubTexture2D, tint [4]float32, rotationRad float32) {
+	rd.ensureQuadCapacity()
 	slot := rd.texSlot(sub.Texture)
 	rd.drawQuadInternal(x, y, w, h, tint, rotationRad, slot, sub.U0, sub.V0, sub.U1, sub.V1)
 }
@@ -117,7 +129,6 @@ func (rd *Renderer2D) texSlot(t core.Texture) float32 {
 	if rd.texCnt >= maxTexSlots {
 		// flush and reset texture bindings
 		rd.flush()
-		rd.BeginScene(rd._vp)
 	}
 	rd.texArr[rd.texCnt] = t
 	rd.texCnt++
@@ -125,10 +136,6 @@ func (rd *Renderer2D) texSlot(t core.Texture) float32 {
 }
 
 func (rd *Renderer2D) drawQuadInternal(x, y, w, h float32, color [4]float32, rotationRad float32, texIndex float32, u0, v0, u1, v1 float32) {
-	if rd.quadCount >= rd.maxQuads {
-		rd.flush()
-		rd.BeginScene(rd._vp)
-	}
 	halfW := w * 0.5
 	halfH := h * 0.5
 
@@ -159,6 +166,7 @@ func (rd *Renderer2D) drawQuadInternal(x, y, w, h float32, color [4]float32, rot
 		startVertex+1, startVertex+2, startVertex+3,
 	)
 	rd.quadCount++
+	rd.stats.QuadCount++
 }
 
 func (rd *Renderer2D) flush() {
@@ -196,11 +204,9 @@ func (rd *Renderer2D) flush() {
 		},
 		Samplers: sam,
 	})
+	rd.stats.DrawCalls++
 
-	// reset batch
-	rd.verts = rd.verts[:0]
-	rd.inds = rd.inds[:0]
-	rd.quadCount = 0
+	rd.resetBatch()
 }
 
 // tiny int->string without fmt to avoid allocs in hot path
@@ -210,4 +216,21 @@ func itoa(i int) string {
 	}
 	// very small usage; fallback to simple build
 	return []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"}[i]
+}
+
+func (rd *Renderer2D) resetBatch() {
+	rd.verts = rd.verts[:0]
+	rd.inds = rd.inds[:0]
+	rd.quadCount = 0
+	for i := range rd.texArr {
+		rd.texArr[i] = nil
+	}
+	rd.texArr[0] = rd.white
+	rd.texCnt = 1
+}
+
+func (rd *Renderer2D) ensureQuadCapacity() {
+	if rd.quadCount >= rd.maxQuads {
+		rd.flush()
+	}
 }

@@ -16,11 +16,14 @@ import (
 type App struct {
 	lastTitle time.Time
 	frames    int
+	layer     *Layer2D
 }
 
 func (a *App) OnStart(e *core.Engine) {
 	// push the 2D demo layer
-	e.Layers.Push(&Layer2D{})
+	l := &Layer2D{}
+	e.Layers.Push(l)
+	a.layer = l
 }
 
 func (a *App) OnUpdate(e *core.Engine, dt float64) {
@@ -28,7 +31,19 @@ func (a *App) OnUpdate(e *core.Engine, dt float64) {
 	if time.Since(a.lastTitle) >= time.Second {
 		elapsed := time.Since(a.lastTitle).Seconds()
 		fps := float64(a.frames) / elapsed
-		e.Window.SetTitle(fmt.Sprintf("Go Engine — ~%.0f FPS", fps))
+		if a.layer != nil {
+			stats := a.layer.Stats()
+			e.Window.SetTitle(fmt.Sprintf(
+				"Go Engine — ~%.0f FPS | DC: %d | Quads: %d | Verts: %d | Inds: %d",
+				fps,
+				stats.DrawCalls,
+				stats.QuadCount,
+				stats.TotalVertexCount(),
+				stats.TotalIndexCount(),
+			))
+		} else {
+			e.Window.SetTitle(fmt.Sprintf("Go Engine — ~%.0f FPS", fps))
+		}
 		a.frames = 0
 		a.lastTitle = time.Now()
 	}
@@ -49,6 +64,7 @@ type Layer2D struct {
 	blue   [4]float32
 	white  [4]float32
 	t      float32
+	stats  renderer2d.Statistics
 }
 
 func (l *Layer2D) OnAttach(e *core.Engine) {
@@ -132,6 +148,7 @@ func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 	l.r2d.DrawSubTexQuad(0, 0, 32, 32, l.player, tint, l.t)
 
 	l.r2d.EndScene()
+	l.stats = l.r2d.Stats()
 }
 
 func (l *Layer2D) OnEvent(e *core.Engine, ev core.Event) bool {
@@ -145,6 +162,8 @@ func (l *Layer2D) OnEvent(e *core.Engine, ev core.Event) bool {
 	}
 	return false
 }
+
+func (l *Layer2D) Stats() renderer2d.Statistics { return l.stats }
 
 func main() {
 	cfg := core.Config{
