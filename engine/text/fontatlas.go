@@ -24,7 +24,7 @@ type Glyph struct {
 	U1, V1   float32
 }
 
-type FontAtlas struct {
+type Font struct {
 	SizePx                   float32
 	Ascent, Descent, LineGap float32
 	Glyphs                   map[rune]Glyph
@@ -34,7 +34,7 @@ type FontAtlas struct {
 	closeFace                func()
 }
 
-func (fa *FontAtlas) Close() {
+func (fa *Font) Close() {
 	if fa != nil && fa.closeFace != nil {
 		fa.closeFace()
 		fa.closeFace = nil
@@ -42,7 +42,7 @@ func (fa *FontAtlas) Close() {
 }
 
 // LoadTTF builds a monochrome (white) glyph atlas (alpha coverage) and uploads it as RGBA texture.
-func LoadTTF(r core.Renderer, ttfRelPath string, sizePx float32) (*FontAtlas, error) {
+func LoadTTF(r core.Renderer, ttfRelPath string, sizePx float32) (*Font, error) {
 	path := filepath.Join("assets", "fonts", ttfRelPath)
 	ttfData, err := os.ReadFile(path)
 	if err != nil {
@@ -211,7 +211,7 @@ func LoadTTF(r core.Renderer, ttfRelPath string, sizePx float32) (*FontAtlas, er
 		return nil, err
 	}
 
-	return &FontAtlas{
+	return &Font{
 		SizePx: sizePx,
 		Ascent: ascent, Descent: descent, LineGap: lineGap,
 		Glyphs:  glyphs,

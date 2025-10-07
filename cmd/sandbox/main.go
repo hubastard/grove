@@ -62,7 +62,7 @@ type Layer2D struct {
 	ctrl   *scene.OrthoController2D
 	r2d    *renderer2d.Renderer2D
 	tex    core.Texture
-	font   *text.FontAtlas
+	font   *text.Font
 	player renderer2d.SubTexture2D
 	red    [4]float32
 	green  [4]float32
