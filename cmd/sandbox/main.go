@@ -75,6 +75,7 @@ func (l *Layer2D) OnAttach(e *core.Engine) {
 	// Camera sized to framebuffer
 	w, h := e.Window.FramebufferSize()
 	l.worldCam = scene.NewOrtho2D(w, h)
+	l.worldCam.SetZoom(4)
 	l.ctrl = scene.NewOrthoController2D(l.worldCam)
 
 	l.uiCam = scene.NewOrtho2D(w, h)
@@ -135,32 +136,30 @@ func (l *Layer2D) OnUpdate(e *core.Engine, dt float64) {
 
 func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 	l.r2d.BeginScene(l.worldCam.VP())
-
-	l.r2d.DrawSubTexQuad(0, 0, 32, 32, l.player, colors.White, l.t)
-
-	// stats := l.Stats()
-	// text.DrawText(l.r2d, l.font, -500, -500, fmt.Sprintf("Draw Calls: %d", stats.DrawCalls), l.white)
+	{
+		l.r2d.DrawSubTexQuad(0, 0, 32, 32, l.player, colors.White, l.t)
+	}
 	l.r2d.EndScene()
 
 	l.r2d.BeginScene(l.uiCam.VP())
-
-	uictx := ui.Context{
-		Viewport:    [4]float32{0, 0, l.uiCam.Width(), l.uiCam.Height()},
-		DefaultFont: l.font,
-		Renderer:    l.r2d,
+	{
+		ui.View(
+			ui.View(
+				ui.Label(fmt.Sprintf("Draw Calls: %d", l.stats.DrawCalls)).FontSize(32),
+				ui.Label(fmt.Sprintf("Quad Count: %d", l.stats.QuadCount)).FontSize(32),
+				ui.Label(fmt.Sprintf("Vertex Count: %d", l.stats.TotalVertexCount())).FontSize(32),
+			).FlowDirection(ui.LayoutVertical).Padding(8).BgColor(colors.Black.WithAlpha(0.5)),
+		).
+			Padding(16).
+			Gap(12).
+			FlowDirection(ui.LayoutVertical).
+			AlignCross(ui.AlignStretch).
+			Draw(&ui.Context{
+				Viewport:    [4]float32{0, 0, l.uiCam.Width(), l.uiCam.Height()},
+				DefaultFont: l.font,
+				Renderer:    l.r2d,
+			})
 	}
-
-	ui.Canvas(
-		ui.Label("Welcome to Grove UI").FontSize(32).Padding(8),
-		ui.Label("This layout engine supports fit, expand, and wrapped text. Resize the viewport or tweak the sizing modes to experiment.").Wrap(true).WidthExpand().Padding(4),
-		ui.Button("Primary Action").FontSize(24).BgColor(colors.Color{0.2, 0.2, 0.8, 1}).WidthExpand(),
-		ui.Button("Secondary").FontSize(16).BgColor(colors.Color{0.15, 0.15, 0.4, 1}).WidthExpand(),
-	).
-		Padding(16).
-		Gap(12).
-		LayoutVertically(true).
-		AlignCross(ui.AlignStretch).
-		Draw(&uictx)
 	l.r2d.EndScene()
 
 	l.stats = l.r2d.Stats()

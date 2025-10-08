@@ -14,3 +14,8 @@ var (
 	Gray     = Color{0.5, 0.5, 0.5, 1}
 	DarkGray = Color{0.08, 0.10, 0.12, 1}
 )
+
+func (c Color) WithAlpha(a float32) Color {
+	c[3] = a
+	return c
+}

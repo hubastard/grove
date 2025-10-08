@@ -1,5 +1,9 @@
 package ui
 
+import (
+	"github.com/hubastard/grove/engine/colors"
+)
+
 type Align int
 
 const (
@@ -9,46 +13,39 @@ const (
 	AlignStretch
 )
 
-type UICanvas struct {
-	Common[*UICanvas]
-	vertical   bool
+type LayoutDirection int
+
+const (
+	LayoutHorizontal LayoutDirection = iota
+	LayoutVertical
+)
+
+type UIView struct {
+	Common[*UIView]
 	gap        float32
 	mainAlign  Align
 	crossAlign Align
+	flow       LayoutDirection
 }
 
-func Canvas(children ...UIElement) *UICanvas {
-	c := &UICanvas{
+func View(children ...UIElement) *UIView {
+	v := &UIView{
 		gap:        10,
 		mainAlign:  AlignStart,
 		crossAlign: AlignStart,
 	}
-	c.Common = NewCommon(c)
-	c.base.children = children
-	return c
+	v.Common = NewCommon(v)
+	v.base.children = children
+	return v
 }
 
-func (l *UICanvas) LayoutVertically(vertical bool) *UICanvas {
-	l.vertical = vertical
-	return l
-}
+func (l *UIView) BgColor(color colors.Color) *UIView              { l.base.color = color; return l }
+func (l *UIView) FlowDirection(direction LayoutDirection) *UIView { l.flow = direction; return l }
+func (l *UIView) Gap(g float32) *UIView                           { l.gap = g; return l }
+func (l *UIView) AlignMain(a Align) *UIView                       { l.mainAlign = a; return l }
+func (l *UIView) AlignCross(a Align) *UIView                      { l.crossAlign = a; return l }
 
-func (l *UICanvas) Gap(g float32) *UICanvas {
-	l.gap = g
-	return l
-}
-
-func (l *UICanvas) AlignMain(a Align) *UICanvas {
-	l.mainAlign = a
-	return l
-}
-
-func (l *UICanvas) AlignCross(a Align) *UICanvas {
-	l.crossAlign = a
-	return l
-}
-
-func (l *UICanvas) Layout(ctx *Context, constraints Constraints) LayoutResult {
+func (l *UIView) Layout(ctx *Context, constraints Constraints) LayoutResult {
 	padding := l.base.Padding()
 	maxWidth := resolveConstraint(constraints.Max[0])
 	maxHeight := resolveConstraint(constraints.Max[1])
@@ -77,7 +74,7 @@ func (l *UICanvas) Layout(ctx *Context, constraints Constraints) LayoutResult {
 		res := child.Layout(ctx, childConstraints)
 		size := res.Size
 		childSizes[i] = size
-		if l.vertical {
+		if l.flow == LayoutVertical {
 			if child.Node().heightMod == SizeModeExpand {
 				expandMainSum += size[1]
 				expandCount++
@@ -104,7 +101,7 @@ func (l *UICanvas) Layout(ctx *Context, constraints Constraints) LayoutResult {
 	var innerMainTarget float32
 	var innerCrossTarget float32
 
-	if l.vertical {
+	if l.flow == LayoutVertical {
 		contentMain := fixedMainSum + expandMainSum + gapTotal
 		outerHeight := l.base.resolveAxis(l.base.heightMod, l.base.heightVal, contentMain+padding[1]+padding[3], minHeight, constraints.Max[1])
 		innerMainTarget = maxf(0, outerHeight-padding[1]-padding[3])
@@ -133,7 +130,7 @@ func (l *UICanvas) Layout(ctx *Context, constraints Constraints) LayoutResult {
 		}
 		share := extra / float32(expandCount)
 		for i, child := range children {
-			if l.vertical {
+			if l.flow == LayoutVertical {
 				if child.Node().heightMod == SizeModeExpand {
 					childSizes[i][1] += share
 				}
@@ -151,7 +148,7 @@ func (l *UICanvas) Layout(ctx *Context, constraints Constraints) LayoutResult {
 	// Calculate total space used after potential expansion for alignment.
 	mainUsed := float32(0)
 	for i := range children {
-		if l.vertical {
+		if l.flow == LayoutVertical {
 			mainUsed += childSizes[i][1]
 		} else {
 			mainUsed += childSizes[i][0]
@@ -177,7 +174,7 @@ func (l *UICanvas) Layout(ctx *Context, constraints Constraints) LayoutResult {
 	for i, child := range children {
 		childSize := childSizes[i]
 		childBase := child.Node()
-		if l.vertical {
+		if l.flow == LayoutVertical {
 			width := childSize[0]
 			if l.crossAlign == AlignStretch || childBase.widthMod == SizeModeExpand {
 				width = innerCrossTarget
@@ -228,7 +225,7 @@ func (l *UICanvas) Layout(ctx *Context, constraints Constraints) LayoutResult {
 	return LayoutResult{Size: l.base.size}
 }
 
-func (l *UICanvas) Draw(ctx *Context) {
+func (l *UIView) Draw(ctx *Context) {
 	if l.base.parent == nil {
 		l.base.SetPos(ctx.Viewport[0], ctx.Viewport[1])
 		constraints := Constraints{
