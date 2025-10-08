@@ -3,6 +3,7 @@ package ui
 import (
 	"math"
 
+	"github.com/hubastard/grove/engine/colors"
 	"github.com/hubastard/grove/engine/gfx/renderer2d"
 	"github.com/hubastard/grove/engine/text"
 )
@@ -41,7 +42,7 @@ type Base struct {
 	children  []UIElement
 	position  [2]float32
 	size      [2]float32
-	color     [4]float32
+	color     colors.Color
 	widthMod  SizeMode
 	heightMod SizeMode
 	widthVal  float32
@@ -49,14 +50,14 @@ type Base struct {
 	padding   [4]float32 // left, top, right, bottom
 }
 
-func (b *Base) Parent() UIElement            { return b.parent }
-func (b *Base) Children() []UIElement        { return b.children }
-func (b *Base) Pos() (x, y float32)          { return b.position[0], b.position[1] }
-func (b *Base) Size() (w, h float32)         { return b.size[0], b.size[1] }
-func (b *Base) SetPos(x, y float32)          { b.position = [2]float32{x, y} }
-func (b *Base) SetSize(w, h float32)         { b.size = [2]float32{w, h} }
-func (b *Base) SetColor(r, g, bl, a float32) { b.color = [4]float32{r, g, bl, a} }
-func (b *Base) Padding() [4]float32          { return b.padding }
+func (b *Base) Parent() UIElement       { return b.parent }
+func (b *Base) Children() []UIElement   { return b.children }
+func (b *Base) Pos() (x, y float32)     { return b.position[0], b.position[1] }
+func (b *Base) Size() (w, h float32)    { return b.size[0], b.size[1] }
+func (b *Base) SetPos(x, y float32)     { b.position = [2]float32{x, y} }
+func (b *Base) SetSize(w, h float32)    { b.size = [2]float32{w, h} }
+func (b *Base) SetColor(c colors.Color) { b.color = c }
+func (b *Base) Padding() [4]float32     { return b.padding }
 func (b *Base) SetPadding(l, t, r, btm float32) {
 	b.padding = [4]float32{l, t, r, btm}
 }
@@ -137,10 +138,10 @@ func NewCommon[T any](owner T) Common[T] {
 	return Common[T]{owner: owner, base: b}
 }
 
-func (c *Common[T]) Node() *Base                { return &c.base }
-func (c *Common[T]) Position(x, y float32) T    { c.base.SetPos(x, y); return c.owner }
-func (c *Common[T]) Size(w, h float32) T        { c.base.SetSize(w, h); return c.owner }
-func (c *Common[T]) Color(r, g, b, a float32) T { c.base.SetColor(r, g, b, a); return c.owner }
+func (c *Common[T]) Node() *Base              { return &c.base }
+func (c *Common[T]) Position(x, y float32) T  { c.base.SetPos(x, y); return c.owner }
+func (c *Common[T]) Size(w, h float32) T      { c.base.SetSize(w, h); return c.owner }
+func (c *Common[T]) Color(col colors.Color) T { c.base.SetColor(col); return c.owner }
 
 func (c *Common[T]) WidthFit() T {
 	c.base.widthMod = SizeModeFit

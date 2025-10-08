@@ -1,6 +1,10 @@
 package core
 
-import "time"
+import (
+	"time"
+
+	"github.com/hubastard/grove/engine/colors"
+)
 
 // App defines the game/application hooks.
 type App interface {
@@ -147,5 +151,5 @@ type Config struct {
 	Height     int
 	TickPerSec int // default: 60
 	VSync      bool
-	ClearColor [4]float32 // RGBA
+	ClearColor colors.Color
 }

@@ -26,6 +26,12 @@ func NewOrtho2D(width, height int) *OrthoCamera2D {
 	return c
 }
 
+func (c *OrthoCamera2D) Size() (float32, float32) {
+	return c.Right - c.Left, c.Bottom - c.Top
+}
+func (c *OrthoCamera2D) Width() float32  { return c.Right - c.Left }
+func (c *OrthoCamera2D) Height() float32 { return c.Bottom - c.Top }
+
 func (c *OrthoCamera2D) SetViewportPixels(w, h int) {
 	halfW := float32(w) * 0.5
 	halfH := float32(h) * 0.5
@@ -34,8 +40,9 @@ func (c *OrthoCamera2D) SetViewportPixels(w, h int) {
 	c.dirty = true
 }
 
-func (c *OrthoCamera2D) Move(dx, dy float32) { c.X += dx; c.Y += dy; c.dirty = true }
-func (c *OrthoCamera2D) Rotate(dRad float32) { c.RotationRad += dRad; c.dirty = true }
+func (c *OrthoCamera2D) SetPosition(x, y float32) { c.X = x; c.Y = y; c.dirty = true }
+func (c *OrthoCamera2D) Move(dx, dy float32)      { c.X += dx; c.Y += dy; c.dirty = true }
+func (c *OrthoCamera2D) Rotate(dRad float32)      { c.RotationRad += dRad; c.dirty = true }
 func (c *OrthoCamera2D) SetZoom(z float32) {
 	if z < 0.05 {
 		z = 0.05

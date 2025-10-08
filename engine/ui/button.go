@@ -1,6 +1,9 @@
 package ui
 
-import "github.com/hubastard/grove/engine/text"
+import (
+	"github.com/hubastard/grove/engine/colors"
+	"github.com/hubastard/grove/engine/text"
+)
 
 type UIButton struct {
 	Common[*UIButton]
@@ -13,14 +16,14 @@ func Button(str string) *UIButton {
 	l.Common = NewCommon(l)
 	l.label = Label(str)
 	l.base.children = append(l.base.children, l.label)
-	l.base.color = [4]float32{1, 1, 1, 1}
+	l.base.color = colors.Color{1, 1, 1, 1}
 	l.base.SetPadding(10, 10, 10, 10)
 	return l
 }
-func (l *UIButton) BgColor(color [4]float32) *UIButton   { l.base.color = color; return l }
-func (l *UIButton) TextColor(color [4]float32) *UIButton { l.label.base.color = color; return l }
-func (l *UIButton) FontSize(size float32) *UIButton      { l.label.fontSize = size; return l }
-func (l *UIButton) Font(font *text.Font) *UIButton       { l.label.font = font; return l }
+func (l *UIButton) BgColor(color colors.Color) *UIButton   { l.base.color = color; return l }
+func (l *UIButton) TextColor(color colors.Color) *UIButton { l.label.base.color = color; return l }
+func (l *UIButton) FontSize(size float32) *UIButton        { l.label.fontSize = size; return l }
+func (l *UIButton) Font(font *text.Font) *UIButton         { l.label.font = font; return l }
 
 func (l *UIButton) Layout(ctx *Context, constraints Constraints) LayoutResult {
 	padding := l.base.Padding()

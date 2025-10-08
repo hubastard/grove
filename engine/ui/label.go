@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/hubastard/grove/engine/colors"
 	"github.com/hubastard/grove/engine/text"
 )
 
@@ -20,13 +21,13 @@ type UILabel struct {
 func Label(str string) *UILabel {
 	l := &UILabel{text: str, fontSize: 16}
 	l.Common = NewCommon(l)
-	l.base.color = [4]float32{1, 1, 1, 1}
+	l.base.color = colors.White
 	return l
 }
-func (l *UILabel) FontSize(size float32) *UILabel  { l.fontSize = size; return l }
-func (l *UILabel) Font(font *text.Font) *UILabel   { l.font = font; return l }
-func (l *UILabel) Color(color [4]float32) *UILabel { l.base.color = color; return l }
-func (l *UILabel) Wrap(enabled bool) *UILabel      { l.wrap = enabled; return l }
+func (l *UILabel) FontSize(size float32) *UILabel { l.fontSize = size; return l }
+func (l *UILabel) Font(font *text.Font) *UILabel  { l.font = font; return l }
+func (l *UILabel) Color(c colors.Color) *UILabel  { l.base.color = c; return l }
+func (l *UILabel) Wrap(enabled bool) *UILabel     { l.wrap = enabled; return l }
 func (l *UILabel) MaxWidth(width float32) *UILabel {
 	l.maxWidth = width
 	if width > 0 {

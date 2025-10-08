@@ -1,9 +1,12 @@
 package text
 
-import "github.com/hubastard/grove/engine/gfx/renderer2d"
+import (
+	"github.com/hubastard/grove/engine/colors"
+	"github.com/hubastard/grove/engine/gfx/renderer2d"
+)
 
 // DrawText draws s with baseline origin (x,y). Positive Y goes downward (matching the 2D projection).
-func DrawText(r2d *renderer2d.Renderer2D, font *Font, x, y float32, s string, color [4]float32) {
+func DrawText(r2d *renderer2d.Renderer2D, font *Font, x, y float32, s string, color colors.Color) {
 	penX := x
 	baseY := y + font.Ascent // move origin to top left
 	var prev rune = -1

@@ -3,6 +3,7 @@ package renderer2d
 import (
 	"math"
 
+	"github.com/hubastard/grove/engine/colors"
 	"github.com/hubastard/grove/engine/core"
 )
 
@@ -38,8 +39,9 @@ type Renderer2D struct {
 	quadCount int
 	maxQuads  int
 
-	_vp   [16]float32
-	stats Statistics
+	_vp           [16]float32
+	stats         Statistics
+	extraUniforms map[string]any
 }
 
 // New creates renderer and compiles the shader pipeline.
@@ -89,28 +91,41 @@ func (rd *Renderer2D) EndScene() { rd.flush() }
 // Stats returns the current frame statistics snapshot.
 func (rd *Renderer2D) Stats() Statistics { return rd.stats }
 
+// SetUniform queues an additional uniform to be sent on every draw call.
+// The uniform persists until overwritten; call with nil to remove.
+func (rd *Renderer2D) SetUniform(name string, value any) {
+	if rd.extraUniforms == nil {
+		rd.extraUniforms = make(map[string]any)
+	}
+	if value == nil {
+		delete(rd.extraUniforms, name)
+		return
+	}
+	rd.extraUniforms[name] = value
+}
+
 // Draw solid color quad (uses white texture in slot 0)
-func (rd *Renderer2D) DrawQuad(x, y, w, h float32, color [4]float32, rotationRad float32) {
+func (rd *Renderer2D) DrawQuad(x, y, w, h float32, color colors.Color, rotationRad float32) {
 	rd.ensureQuadCapacity()
 	rd.drawQuadInternal(x, y, w, h, color, rotationRad, rd.texSlot(rd.white), 0, 0, 1, 1)
 }
 
 // Draw textured quad with UVs (tint color)
-func (rd *Renderer2D) DrawTexturedQuad(x, y, w, h float32, tex core.Texture, tint [4]float32, rotationRad float32) {
+func (rd *Renderer2D) DrawTexturedQuad(x, y, w, h float32, tex core.Texture, tint colors.Color, rotationRad float32) {
 	rd.ensureQuadCapacity()
 	slot := rd.texSlot(tex)
 	rd.drawQuadInternal(x, y, w, h, tint, rotationRad, slot, 0, 0, 1, 1)
 }
 
 // Draw textured sub-rect (UV rect: u0,v0 -> u1,v1)
-func (rd *Renderer2D) DrawTexturedQuadUV(x, y, w, h float32, tex core.Texture, tint [4]float32, rotationRad float32, u0, v0, u1, v1 float32) {
+func (rd *Renderer2D) DrawTexturedQuadUV(x, y, w, h float32, tex core.Texture, tint colors.Color, rotationRad float32, u0, v0, u1, v1 float32) {
 	rd.ensureQuadCapacity()
 	slot := rd.texSlot(tex)
 	rd.drawQuadInternal(x, y, w, h, tint, rotationRad, slot, u0, v0, u1, v1)
 }
 
 // DrawSubTexQuad draws a quad using a SubTexture2D (tint + rotation optional).
-func (rd *Renderer2D) DrawSubTexQuad(x, y, w, h float32, sub SubTexture2D, tint [4]float32, rotationRad float32) {
+func (rd *Renderer2D) DrawSubTexQuad(x, y, w, h float32, sub SubTexture2D, tint colors.Color, rotationRad float32) {
 	rd.ensureQuadCapacity()
 	slot := rd.texSlot(sub.Texture)
 	rd.drawQuadInternal(x, y, w, h, tint, rotationRad, slot, sub.U0, sub.V0, sub.U1, sub.V1)
@@ -135,7 +150,7 @@ func (rd *Renderer2D) texSlot(t core.Texture) float32 {
 	return float32(rd.texCnt - 1)
 }
 
-func (rd *Renderer2D) drawQuadInternal(x, y, w, h float32, color [4]float32, rotationRad float32, texIndex float32, u0, v0, u1, v1 float32) {
+func (rd *Renderer2D) drawQuadInternal(x, y, w, h float32, color colors.Color, rotationRad float32, texIndex float32, u0, v0, u1, v1 float32) {
 	halfW := w * 0.5
 	halfH := h * 0.5
 
@@ -196,12 +211,16 @@ func (rd *Renderer2D) flush() {
 		sam[name] = rd.texArr[i]
 	}
 
+	uniforms := make(map[string]any, len(rd.extraUniforms)+1)
+	uniforms["uVP"] = rd._vp
+	for k, v := range rd.extraUniforms {
+		uniforms[k] = v
+	}
+
 	rd.r.Draw(core.DrawCmd{
-		Pipe: rd.pipe,
-		Mesh: mesh,
-		Uniforms: map[string]any{
-			"uVP": rd._vp,
-		},
+		Pipe:     rd.pipe,
+		Mesh:     mesh,
+		Uniforms: uniforms,
 		Samplers: sam,
 	})
 	rd.stats.DrawCalls++
