@@ -248,7 +248,7 @@ func Sprintf(format string, args ...any) string {
 		log.Printf("Scratch :: Sprintf caused grow to capacity %d\n", cap(buf))
 	}
 
-	return string(buf[mark:])
+	return StringViewFrom(mark)
 }
 
 // ----- tiny helpers (no alloc) -----

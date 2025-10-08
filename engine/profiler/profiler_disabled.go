@@ -22,7 +22,7 @@ func MemoryUsage() uint64 {
 
 func MemoryAllocs() uint64 {
 	runtime.ReadMemStats(&m)
-	return m.Mallocs
+	return m.Alloc
 }
 
 func NumGoroutine() int {

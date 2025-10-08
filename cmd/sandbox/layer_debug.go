@@ -22,6 +22,8 @@ type LayerDebug struct {
 	frameDuration float32
 	tick          int
 	ctx           *ui.Ctx
+	lastAllocs    uint64
+	allocs        uint64
 }
 
 type UIRenderer struct {
@@ -82,7 +84,8 @@ func (l *LayerDebug) OnUpdate(e *core.Engine, dt float64) {
 	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tTextures: %d", l.stats.TextureCount)})
 	ui.Label(ui.LabelProps{Text: "Memory", Color: colors.Yellow})
 	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tUsage: %.3f MB", float32(profiler.MemoryUsage())/(1<<20))})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tAllocs: %d", profiler.MemoryAllocs())})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tTotal Allocs: %d", l.allocs)})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tFrame Allocs: %d", l.allocs-l.lastAllocs)})
 	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tGoroutines: %d", profiler.NumGoroutine())})
 	ui.Label(ui.LabelProps{Text: "CPU", Color: colors.Yellow})
 	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tCount: %d", profiler.NumCPU())})
@@ -102,6 +105,9 @@ func (l *LayerDebug) OnRender(e *core.Engine, alpha float64) {
 	l.r2d.EndScene()
 
 	scopeRender.End()
+
+	l.lastAllocs = l.allocs
+	l.allocs = profiler.MemoryAllocs()
 }
 
 func (l *LayerDebug) OnEvent(e *core.Engine, ev core.Event) bool {
