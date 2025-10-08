@@ -1,6 +1,7 @@
 package scratch
 
 import (
+	"log"
 	"strconv"
 	"unsafe"
 )
@@ -9,14 +10,24 @@ import (
 // Initialize once with Init(capacity). Reset() every frame.
 // If you ever exceed capacity, call GrowTo(...) at init/loading time (not per-frame).
 var buf []byte
+var enableLogs bool
 
 // Init sets up the global scratch buffer. Call once at startup.
-// Example: scratch.Init(4 * 1024)
+// Default capacity is 4 KB if <= 0.
 func Init(capacity int) {
 	if capacity <= 0 {
-		capacity = 1024
+		capacity = 4096
 	}
 	buf = make([]byte, 0, capacity)
+
+	if enableLogs {
+		log.Printf("Scratch :: initialized with capacity %d\n", capacity)
+	}
+}
+
+// EnableLogs turns on logging of scratch allocator events.
+func EnableLogs(enable bool) {
+	enableLogs = enable
 }
 
 // Reset clears the buffer length without freeing memory.
@@ -38,6 +49,10 @@ func GrowTo(minCapacity int) {
 	nb := make([]byte, len(buf), minCapacity)
 	copy(nb, buf)
 	buf = nb
+
+	if enableLogs {
+		log.Printf("Scratch :: grew to capacity %d\n", cap(buf))
+	}
 }
 
 // Ensure ensures there is room for at least n more bytes (amortized, not every call).
@@ -181,6 +196,7 @@ func (Builder) Pad(n int, c byte) Builder {
 func Sprintf(format string, args ...any) string {
 	var ai int
 	mark := len(buf)
+	prevCap := cap(buf)
 	for i := 0; i < len(format); i++ {
 		ch := format[i]
 		if ch != '%' {
@@ -227,6 +243,11 @@ func Sprintf(format string, args ...any) string {
 		}
 		ai++
 	}
+
+	if enableLogs && cap(buf) != prevCap {
+		log.Printf("Scratch :: Sprintf caused grow to capacity %d\n", cap(buf))
+	}
+
 	return string(buf[mark:])
 }
 

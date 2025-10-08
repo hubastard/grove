@@ -2,6 +2,7 @@ package renderer2d
 
 import (
 	"math"
+	"strconv"
 
 	"github.com/hubastard/grove/engine/colors"
 	"github.com/hubastard/grove/engine/core"
@@ -14,6 +15,16 @@ const maxTexSlots = 16
 const vStride = 9
 const vertsPerQuad = 4
 const indsPerQuad = 6
+
+var quadVertexLayout = core.VertexLayout{
+	Stride: vStride * 4,
+	Attributes: []core.VertexAttrib{
+		{Location: 0, Size: 2, Type: core.AttribFloat32, Offset: 0},     // pos
+		{Location: 1, Size: 4, Type: core.AttribFloat32, Offset: 2 * 4}, // color
+		{Location: 2, Size: 2, Type: core.AttribFloat32, Offset: 6 * 4}, // uv
+		{Location: 3, Size: 1, Type: core.AttribFloat32, Offset: 8 * 4}, // texIndex
+	},
+}
 
 // Statistics captures the counts generated during a renderer frame.
 type Statistics struct {
@@ -39,6 +50,11 @@ type Renderer2D struct {
 	inds      []uint32
 	quadCount int
 	maxQuads  int
+
+	mesh     core.Mesh
+	samplers map[string]core.Texture
+	uniforms map[string]any
+	texNames [maxTexSlots]string
 
 	_vp           [16]float32
 	stats         Statistics
@@ -78,6 +94,26 @@ func New(r core.Renderer, vertSrc, fragSrc string, maxQuads int) (*Renderer2D, e
 		verts: make([]float32, 0, maxQuads*vertsPerQuad*vStride),
 		inds:  make([]uint32, 0, maxQuads*indsPerQuad),
 	}
+
+	// Create a reusable mesh large enough for the biggest batch.
+	initialVerts := make([]float32, maxQuads*vertsPerQuad*vStride)
+	initialInds := make([]uint32, maxQuads*indsPerQuad)
+	mesh, err := r.CreateMesh(core.MeshDesc{
+		Vertices: initialVerts,
+		Indices:  initialInds,
+		Layout:   quadVertexLayout,
+	})
+	if err != nil {
+		return nil, err
+	}
+	rd.mesh = mesh
+
+	rd.samplers = make(map[string]core.Texture, maxTexSlots)
+	rd.uniforms = make(map[string]any, 4)
+	for i := 0; i < maxTexSlots; i++ {
+		rd.texNames[i] = "uTex[" + strconv.Itoa(i) + "]"
+	}
+
 	return rd, nil
 }
 
@@ -191,52 +227,34 @@ func (rd *Renderer2D) flush() {
 		return
 	}
 
-	// build mesh on the fly
-	mesh, _ := rd.r.CreateMesh(core.MeshDesc{
-		Vertices: rd.verts,
-		Indices:  rd.inds,
-		Layout: core.VertexLayout{
-			Stride: vStride * 4,
-			Attributes: []core.VertexAttrib{
-				{Location: 0, Size: 2, Type: core.AttribFloat32, Offset: 0},     // pos
-				{Location: 1, Size: 4, Type: core.AttribFloat32, Offset: 2 * 4}, // color
-				{Location: 2, Size: 2, Type: core.AttribFloat32, Offset: 6 * 4}, // uv
-				{Location: 3, Size: 1, Type: core.AttribFloat32, Offset: 8 * 4}, // texIndex
-			},
-		},
-	})
-
-	// bind samplers: uTex[0..N-1]
-	sam := make(map[string]core.Texture, rd.texCnt)
-	for i := 0; i < rd.texCnt; i++ {
-		name := "uTex[" + itoa(i) + "]"
-		sam[name] = rd.texArr[i]
+	if err := rd.r.UpdateMesh(rd.mesh, rd.verts, rd.inds); err != nil {
+		panic(err)
 	}
 
-	uniforms := make(map[string]any, len(rd.extraUniforms)+1)
-	uniforms["uVP"] = rd._vp
+	for k := range rd.samplers {
+		delete(rd.samplers, k)
+	}
+	for i := 0; i < rd.texCnt; i++ {
+		rd.samplers[rd.texNames[i]] = rd.texArr[i]
+	}
+
+	for k := range rd.uniforms {
+		delete(rd.uniforms, k)
+	}
+	rd.uniforms["uVP"] = rd._vp
 	for k, v := range rd.extraUniforms {
-		uniforms[k] = v
+		rd.uniforms[k] = v
 	}
 
 	rd.r.Draw(core.DrawCmd{
 		Pipe:     rd.pipe,
-		Mesh:     mesh,
-		Uniforms: uniforms,
-		Samplers: sam,
+		Mesh:     rd.mesh,
+		Uniforms: rd.uniforms,
+		Samplers: rd.samplers,
 	})
 	rd.stats.DrawCalls++
 
 	rd.resetBatch()
-}
-
-// tiny int->string without fmt to avoid allocs in hot path
-func itoa(i int) string {
-	if i < 10 {
-		return string('0' + byte(i))
-	}
-	// very small usage; fallback to simple build
-	return []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"}[i]
 }
 
 func (rd *Renderer2D) resetBatch() {

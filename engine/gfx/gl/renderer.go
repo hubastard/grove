@@ -12,11 +12,14 @@ import (
 // ---------- GL handles implementing core.Mesh / core.Pipeline / core.Texture ----------
 
 type meshGL struct {
-	vao  uint32
-	vbo  uint32
-	ebo  uint32 // 0 if none
-	nIdx int
-	nVtx int
+	vao       uint32
+	vbo       uint32
+	ebo       uint32 // 0 if none
+	nIdx      int
+	nVtx      int
+	stride    int32
+	vCapBytes int
+	iCapBytes int
 }
 
 func (meshGL) IsMesh() {}
@@ -38,7 +41,8 @@ type texGL struct {
 func (texGL) IsTexture() {}
 
 type RendererGL struct {
-	win core.Window
+	win                       core.Window
+	vendor, renderer, version string
 }
 
 func NewRendererGL(win core.Window, _ core.Config) (*RendererGL, error) {
@@ -51,6 +55,9 @@ func NewRendererGL(win core.Window, _ core.Config) (*RendererGL, error) {
 
 func (r *RendererGL) Init() error {
 	gl.Enable(gl.DEPTH_TEST) // default on
+	r.vendor = gl.GoStr(gl.GetString(gl.VENDOR))
+	r.renderer = gl.GoStr(gl.GetString(gl.RENDERER))
+	r.version = gl.GoStr(gl.GetString(gl.VERSION))
 	return nil
 }
 func (r *RendererGL) Shutdown()       {}
@@ -68,12 +75,22 @@ func (r *RendererGL) CreateMesh(desc core.MeshDesc) (core.Mesh, error) {
 
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, len(desc.Vertices)*4, gl.Ptr(desc.Vertices), gl.STATIC_DRAW)
+	vSize := len(desc.Vertices) * 4
+	var vPtr unsafe.Pointer
+	if len(desc.Vertices) > 0 {
+		vPtr = gl.Ptr(desc.Vertices)
+	}
+	gl.BufferData(gl.ARRAY_BUFFER, vSize, vPtr, gl.DYNAMIC_DRAW)
 
+	iSize := len(desc.Indices) * 4
 	if len(desc.Indices) > 0 {
 		gl.GenBuffers(1, &ebo)
 		gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
-		gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(desc.Indices)*4, gl.Ptr(desc.Indices), gl.STATIC_DRAW)
+		var iPtr unsafe.Pointer
+		if len(desc.Indices) > 0 {
+			iPtr = gl.Ptr(desc.Indices)
+		}
+		gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, iSize, iPtr, gl.DYNAMIC_DRAW)
 	}
 
 	for _, a := range desc.Layout.Attributes {
@@ -92,7 +109,16 @@ func (r *RendererGL) CreateMesh(desc core.MeshDesc) (core.Mesh, error) {
 	if desc.Layout.Stride > 0 && len(desc.Vertices) > 0 && len(desc.Indices) == 0 {
 		nVtx = len(desc.Vertices) * 4 / desc.Layout.Stride
 	}
-	m := &meshGL{vao: vao, vbo: vbo, ebo: ebo, nIdx: len(desc.Indices), nVtx: nVtx}
+	m := &meshGL{
+		vao:       vao,
+		vbo:       vbo,
+		ebo:       ebo,
+		nIdx:      len(desc.Indices),
+		nVtx:      nVtx,
+		stride:    int32(desc.Layout.Stride),
+		vCapBytes: vSize,
+		iCapBytes: iSize,
+	}
 	return m, nil
 }
 
@@ -125,9 +151,54 @@ func (r *RendererGL) CreateTexture(desc core.TextureDesc) (core.Texture, error) 
 	return &texGL{id: id, w: desc.Width, h: desc.Height}, nil
 }
 
-func (r *RendererGL) GPUVendor() string   { return gl.GoStr(gl.GetString(gl.VENDOR)) }
-func (r *RendererGL) GPURenderer() string { return gl.GoStr(gl.GetString(gl.RENDERER)) }
-func (r *RendererGL) GPUVersion() string  { return gl.GoStr(gl.GetString(gl.VERSION)) }
+func (r *RendererGL) GPUVendor() string   { return r.vendor }
+func (r *RendererGL) GPURenderer() string { return r.renderer }
+func (r *RendererGL) GPUVersion() string  { return r.version }
+
+func (r *RendererGL) UpdateMesh(mesh core.Mesh, vertices []float32, indices []uint32) error {
+	m := mesh.(*meshGL)
+
+	gl.BindVertexArray(m.vao)
+
+	// vertex buffer
+	vSize := len(vertices) * 4
+	if vSize > 0 {
+		gl.BindBuffer(gl.ARRAY_BUFFER, m.vbo)
+		if vSize > m.vCapBytes {
+			gl.BufferData(gl.ARRAY_BUFFER, vSize, gl.Ptr(vertices), gl.DYNAMIC_DRAW)
+			m.vCapBytes = vSize
+		} else {
+			gl.BufferSubData(gl.ARRAY_BUFFER, 0, vSize, gl.Ptr(vertices))
+		}
+		if m.stride > 0 {
+			m.nVtx = vSize / int(m.stride)
+		}
+	} else {
+		m.nVtx = 0
+	}
+
+	// index buffer
+	if m.ebo != 0 {
+		iSize := len(indices) * 4
+		gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ebo)
+		if iSize > 0 {
+			if iSize > m.iCapBytes {
+				gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, iSize, gl.Ptr(indices), gl.DYNAMIC_DRAW)
+				m.iCapBytes = iSize
+			} else {
+				gl.BufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, iSize, gl.Ptr(indices))
+			}
+			m.nIdx = len(indices)
+		} else {
+			m.nIdx = 0
+		}
+	} else {
+		m.nIdx = 0
+	}
+
+	gl.BindVertexArray(0)
+	return nil
+}
 
 // ------- Helpers -------
 

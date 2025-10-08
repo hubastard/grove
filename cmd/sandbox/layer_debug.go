@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/hubastard/grove/engine/colors"
 	"github.com/hubastard/grove/engine/core"
@@ -109,9 +109,9 @@ func (l *LayerDebug) OnEvent(e *core.Engine, ev core.Event) bool {
 	case core.EventKey:
 		if v.Down && v.Key == core.KeyP && (v.Mods&core.ModCtrl) != 0 {
 			if path, err := profiler.OpenProfilerGraph(); err == nil {
-				fmt.Println("speedscope dump:", path)
+				log.Printf("speedscope dump: %s\n", path)
 			} else {
-				fmt.Println("profiler dump error:", err)
+				log.Printf("profiler dump error: %v\n", err)
 			}
 			return true
 		}

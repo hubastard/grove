@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/hubastard/grove/engine/assets"
 	"github.com/hubastard/grove/engine/colors"
 	"github.com/hubastard/grove/engine/core"
@@ -75,15 +73,6 @@ func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 
 func (l *Layer2D) OnEvent(e *core.Engine, ev core.Event) bool {
 	switch v := ev.(type) {
-	case core.EventKey:
-		if v.Down && v.Key == core.KeyP && (v.Mods&core.ModCtrl) != 0 {
-			if path, err := profiler.OpenProfilerGraph(); err == nil {
-				fmt.Println("speedscope dump:", path)
-			} else {
-				fmt.Println("profiler dump error:", err)
-			}
-			return true
-		}
 	case core.EventResize:
 		l.cam.SetViewportPixels(v.W, v.H)
 	case core.EventScroll:

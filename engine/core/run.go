@@ -6,12 +6,19 @@ import (
 	"time"
 
 	"github.com/hubastard/grove/engine/profiler"
+	"github.com/hubastard/grove/engine/scratch"
 )
 
 // Run wires the platform window + renderer and executes the main loop.
 func Run(app App, cfg Config, newWindow func(Config) (Window, error), newRenderer func(Window, Config) (Renderer, error)) error {
 	// Graphics contexts require the main OS thread.
 	runtime.LockOSThread()
+
+	// This initializes the scratch allocator used in various places,which resets every frame.
+	if cfg.ScratchEnableLogs {
+		scratch.EnableLogs(true)
+	}
+	scratch.Init(cfg.ScratchAllocCapacity)
 
 	win, err := newWindow(cfg)
 	if err != nil {
@@ -63,6 +70,9 @@ func Run(app App, cfg Config, newWindow func(Config) (Window, error), newRendere
 	)
 
 	for !win.ShouldClose() {
+		// Scratch Allocator is reset every frame
+		scratch.Reset()
+
 		scopeFrame := profiler.Start("Frame")
 
 		now := time.Now()

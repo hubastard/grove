@@ -103,6 +103,7 @@ type Renderer interface {
 	Resize(w, h int)
 	Clear(r, g, b, a float32)
 	CreateMesh(desc MeshDesc) (Mesh, error)
+	UpdateMesh(mesh Mesh, vertices []float32, indices []uint32) error
 	CreatePipeline(desc PipelineDesc) (Pipeline, error)
 	CreateTexture(desc TextureDesc) (Texture, error)
 	Draw(cmd DrawCmd)
@@ -149,10 +150,12 @@ func (EventMouseMove) isEvent() {}
 
 // Config for the engine run.
 type Config struct {
-	Title      string
-	Width      int
-	Height     int
-	TickPerSec int // default: 60
-	VSync      bool
-	ClearColor colors.Color
+	Title                string
+	Width                int
+	Height               int
+	TickPerSec           int // default: 60
+	VSync                bool
+	ClearColor           colors.Color
+	ScratchAllocCapacity int  // initial scratch allocator capacity in bytes (default: 4 KB)
+	ScratchEnableLogs    bool // if true, log scratch allocator events (default: false)
 }
