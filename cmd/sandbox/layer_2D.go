@@ -62,11 +62,15 @@ func (l *Layer2D) OnUpdate(e *core.Engine, dt float64) {
 }
 
 func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
+	renderEnd := profiler.Start("Layer2D.OnRender")
+
 	l.r2d.BeginScene(l.cam.VP())
 	{
 		l.r2d.DrawSubTexQuad(0, 0, 32, 32, l.player, colors.White, l.t)
 	}
 	l.r2d.EndScene()
+
+	renderEnd()
 }
 
 func (l *Layer2D) OnEvent(e *core.Engine, ev core.Event) bool {
