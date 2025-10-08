@@ -13,6 +13,7 @@ import (
 	"github.com/hubastard/grove/engine/profiler"
 	"github.com/hubastard/grove/engine/scene"
 	"github.com/hubastard/grove/engine/text"
+	"github.com/hubastard/grove/engine/ui"
 )
 
 type App struct {
@@ -140,23 +141,29 @@ func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 	vp := l.cam.VP()
 	l.r2d.BeginScene(vp)
 
-	// grid of colored quads
-	for y := -3; y <= 3; y++ {
-		for x := -5; x <= 5; x++ {
-			col := l.white
-			if (x+y)%2 == 0 {
-				col = l.blue
-			} else {
-				col = l.green
-			}
-			l.r2d.DrawQuad(float32(x*100), float32(y*100), 90, 90, col, 0)
-		}
+	// l.r2d.DrawSubTexQuad(0, 0, 32, 32, l.player, l.white, l.t)
+
+	// stats := l.Stats()
+	// text.DrawText(l.r2d, l.font, -500, -500, fmt.Sprintf("Draw Calls: %d", stats.DrawCalls), l.white)
+
+	uictx := ui.Context{
+		Viewport:    [4]float32{0, 0, 800, 0},
+		DefaultFont: l.font,
+		Renderer:    l.r2d,
 	}
 
-	l.r2d.DrawSubTexQuad(0, 0, 32, 32, l.player, l.white, l.t)
-
-	stats := l.Stats()
-	text.DrawText(l.r2d, l.font, -500, -500, fmt.Sprintf("Draw Calls: %d", stats.DrawCalls), l.white)
+	ui.Canvas(
+		ui.Label("Welcome to Grove UI").FontSize(32).Padding(8),
+		ui.Label("This layout engine supports fit, expand, and wrapped text. Resize the viewport or tweak the sizing modes to experiment.").Wrap(true).WidthExpand().Padding(4),
+		ui.Button("Primary Action").FontSize(24).BgColor([4]float32{0.2, 0.2, 0.8, 1}).WidthExpand(),
+		ui.Button("Secondary").FontSize(16).BgColor([4]float32{0.15, 0.15, 0.4, 1}).WidthExpand(),
+	).
+		Padding(16).
+		Gap(12).
+		Color(0.1, 0.5, 0.5, 0.85).
+		LayoutVertically(true).
+		AlignCross(ui.AlignStretch).
+		Draw(&uictx)
 
 	l.r2d.EndScene()
 	l.stats = l.r2d.Stats()

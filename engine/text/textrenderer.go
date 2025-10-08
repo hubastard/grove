@@ -57,8 +57,6 @@ func MeasureText(font *Font, s string, size float32) (width, height float32) {
 	lineH := font.Ascent - font.Descent + font.LineGap
 	height = lineH
 
-	scale := size / font.SizePx
-
 	for _, r := range s {
 		if r == '\n' {
 			if lineW > width {
@@ -90,7 +88,7 @@ func MeasureText(font *Font, s string, size float32) (width, height float32) {
 	if lineW > width {
 		width = lineW
 	}
-	return width * scale, height * scale
+	return width, height
 }
 
 // Baseline-to-top distance (useful to position text by top-left).
