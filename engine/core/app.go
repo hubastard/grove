@@ -124,7 +124,7 @@ type EventResize struct{ W, H int }
 
 func (EventResize) isEvent() {}
 
-type EventScroll struct{ Xoff, Yoff float64 }
+type EventScroll struct{ Xoff, Yoff float32 }
 
 func (EventScroll) isEvent() {}
 
@@ -143,7 +143,7 @@ type EventMouseButton struct {
 
 func (EventMouseButton) isEvent() {}
 
-type EventMouseMove struct{ X, Y float64 }
+type EventMouseMove struct{ X, Y float32 }
 
 func (EventMouseMove) isEvent() {}
 

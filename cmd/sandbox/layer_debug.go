@@ -8,6 +8,7 @@ import (
 	"github.com/hubastard/grove/engine/gfx/renderer2d"
 	"github.com/hubastard/grove/engine/profiler"
 	"github.com/hubastard/grove/engine/scene"
+	"github.com/hubastard/grove/engine/scratch"
 	"github.com/hubastard/grove/engine/text"
 	"github.com/hubastard/grove/engine/ui"
 )
@@ -20,6 +21,24 @@ type LayerDebug struct {
 	stats         *renderer2d.Statistics
 	frameDuration float32
 	tick          int
+	ctx           *ui.Ctx
+}
+
+type UIRenderer struct {
+	r2d  *renderer2d.Renderer2D
+	font *text.Font
+}
+
+// Draws a solid quad centered at (cx, cy) with w,h and color RGBA [0..1]
+func (u *UIRenderer) DrawQuad(cx, cy, w, h float32, color [4]float32, rotation float32) {
+	u.r2d.DrawQuad(cx, cy, w, h, color, rotation)
+}
+func (u *UIRenderer) DrawText(x, y float32, str string, size float32, color [4]float32) {
+	text.DrawText(u.r2d, u.font, x, y, str, color)
+}
+func (u *UIRenderer) Measure(str string, size float32) (w, h float32) {
+	// TODO: support size scaling
+	return text.MeasureText(u.font, str)
 }
 
 func (l *LayerDebug) OnAttach(e *core.Engine) {
@@ -27,51 +46,59 @@ func (l *LayerDebug) OnAttach(e *core.Engine) {
 	w, h := e.Window.FramebufferSize()
 	l.cam = scene.NewOrtho2D(w, h)
 	l.cam.SetPosition(float32(w/2), float32(h/2)) // origin top-left
+
+	l.ctx = ui.New(64, 512, 512)
+	l.ctx.R = &UIRenderer{r2d: l.r2d, font: l.font}
+	l.ctx.I = &ui.Input{}
 }
 
 func (l *LayerDebug) OnDetach(e *core.Engine) {}
 
-func (l *LayerDebug) OnUpdate(e *core.Engine, dt float64) {}
+func (l *LayerDebug) OnUpdate(e *core.Engine, dt float64) {
+	l.ctx.I.MouseX, l.ctx.I.MouseY = e.Input.MousePosition()
+	l.ctx.I.MouseDown = e.Input.IsMouseDown(core.MouseButtonLeft)
+	l.ctx.I.MousePressed = e.Input.IsMousePressed(core.MouseButtonLeft)
+	l.ctx.I.MouseReleased = e.Input.IsMouseReleased(core.MouseButtonLeft)
+
+	// Update UI
+	ui.Use(l.ctx)
+	ui.BeginFrame(l.ctx)
+
+	ui.BeginView(ui.Props{
+		Axis:      ui.Vertical,
+		MainAlign: ui.End,
+		Sizing:    ui.Fit(),
+		Padding:   ui.Insets(8, 8, 8, 8),
+		Gap:       8,
+		ID:        1,
+	})
+
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("Frame: %d", l.tick), Color: colors.Yellow})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\t%2.3f ms (%.2f FPS)", l.frameDuration, 1000.0/l.frameDuration)})
+	ui.Label(ui.LabelProps{Text: "2D Renderer", Color: colors.Yellow})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tDraw Calls: %d", l.stats.DrawCalls)})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tQuads: %d", l.stats.QuadCount)})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tVertices: %d", l.stats.TotalVertexCount())})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tTextures: %d", l.stats.TextureCount)})
+	ui.Label(ui.LabelProps{Text: "Memory", Color: colors.Yellow})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tUsage: %.3f MB", float32(profiler.MemoryUsage())/(1<<20))})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tAllocs: %d", profiler.MemoryAllocs())})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tGoroutines: %d", profiler.NumGoroutine())})
+	ui.Label(ui.LabelProps{Text: "CPU", Color: colors.Yellow})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tCount: %d", profiler.NumCPU())})
+	ui.Label(ui.LabelProps{Text: "GPU", Color: colors.Yellow})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tVendor: %s", e.Renderer.GPUVendor())})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tRenderer: %s", e.Renderer.GPURenderer())})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tVersion: %s", e.Renderer.GPUVersion())})
+
+	ui.EndView()
+}
 
 func (l *LayerDebug) OnRender(e *core.Engine, alpha float64) {
 	scopeRender := profiler.Start("LayerDebug.OnRender")
 
 	l.r2d.BeginScene(l.cam.VP())
-	{
-		ui.View(
-			ui.View(
-				ui.Label(fmt.Sprintf("Frame: %d", l.tick)).Padding4(0, 24, 0, 0).Color(colors.Yellow),
-				ui.Label(fmt.Sprintf("\t%2.3f ms (%.2f FPS)", l.frameDuration, 1000.0/l.frameDuration)),
-				ui.Label("2D Renderer").Padding4(0, 24, 0, 0).Color(colors.Yellow),
-				ui.Label(fmt.Sprintf("\tDraw Calls: %d", l.stats.DrawCalls)),
-				ui.Label(fmt.Sprintf("\tQuads: %d", l.stats.QuadCount)),
-				ui.Label(fmt.Sprintf("\tVertices: %d", l.stats.TotalVertexCount())),
-				ui.Label(fmt.Sprintf("\tTextures: %d", l.stats.TextureCount)),
-				ui.Label("Memory").Padding4(0, 24, 0, 0).Color(colors.Yellow),
-				ui.Label(fmt.Sprintf("\tUsage: %.3f MB", float32(profiler.MemoryUsage())/(1<<20))),
-				ui.Label(fmt.Sprintf("\tAllocs: %d", profiler.MemoryAllocs())),
-				ui.Label(fmt.Sprintf("\tGoroutines: %d", profiler.NumGoroutine())),
-				ui.Label("CPU").Padding4(0, 24, 0, 0).Color(colors.Yellow),
-				ui.Label(fmt.Sprintf("\tCount: %d", profiler.NumCPU())),
-				ui.Label("GPU").Padding4(0, 24, 0, 0).Color(colors.Yellow),
-				ui.Label(fmt.Sprintf("\tVendor: %s", e.Renderer.GPUVendor())),
-				ui.Label(fmt.Sprintf("\tRenderer: %s", e.Renderer.GPURenderer())),
-				ui.Label(fmt.Sprintf("\tVersion: %s", e.Renderer.GPUVersion())),
-			).
-				FlowDirection(ui.LayoutVertical).
-				Padding(24).
-				BgColor(colors.Black.WithAlpha(0.5)),
-		).
-			Padding(16).
-			Gap(12).
-			FlowDirection(ui.LayoutVertical).
-			AlignCross(ui.AlignStretch).
-			Draw(&ui.Context{
-				Viewport:    [4]float32{0, 0, l.cam.Width(), l.cam.Height()},
-				DefaultFont: l.font,
-				Renderer:    l.r2d,
-			})
-	}
+	ui.Flush(l.ctx)
 	l.r2d.EndScene()
 
 	scopeRender.End()

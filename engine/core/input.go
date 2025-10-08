@@ -2,18 +2,37 @@ package core
 
 type Input struct {
 	keys             map[Key]bool
-	mods             Mod
+	lastKeys         map[Key]bool
 	mouse            map[MouseButton]bool
-	mouseX, mouseY   float64
-	scrollX, scrollY float64
+	lastMouse        map[MouseButton]bool
+	mods             Mod
+	mouseX, mouseY   float32
+	scrollX, scrollY float32
 }
 
 func NewInput() *Input {
 	return &Input{
-		keys:  map[Key]bool{},
-		mods:  ModNone,
-		mouse: map[MouseButton]bool{},
+		keys:      map[Key]bool{},
+		lastKeys:  map[Key]bool{},
+		mouse:     map[MouseButton]bool{},
+		lastMouse: map[MouseButton]bool{},
+		mods:      ModNone,
 	}
+}
+
+func (in *Input) NewFrame() {
+	// copy current state to last state
+	for k, v := range in.keys {
+		in.lastKeys[k] = v
+	}
+
+	for b, v := range in.mouse {
+		in.lastMouse[b] = v
+	}
+
+	// reset scroll offsets
+	in.scrollX = 0
+	in.scrollY = 0
 }
 
 func (in *Input) Handle(ev Event) {
@@ -30,11 +49,15 @@ func (in *Input) Handle(ev Event) {
 	}
 }
 
-func (in *Input) IsKeyDown(k Key) bool                 { return in.keys[k] }
-func (in *Input) IsModActive(m Mod) bool               { return in.mods&m != 0 }
-func (in *Input) IsMouseButtonDown(b MouseButton) bool { return in.mouse[b] }
-func (in *Input) Mouse() (float64, float64)            { return in.mouseX, in.mouseY }
-func (in *Input) Scroll() (float64, float64)           { return in.scrollX, in.scrollY }
+func (in *Input) IsKeyDown(k Key) bool               { return in.keys[k] }
+func (in *Input) IsKeyPressed(k Key) bool            { return in.keys[k] && !in.lastKeys[k] }
+func (in *Input) IsKeyReleased(k Key) bool           { return !in.keys[k] && in.lastKeys[k] }
+func (in *Input) IsModActive(m Mod) bool             { return in.mods&m != 0 }
+func (in *Input) IsMouseDown(b MouseButton) bool     { return in.mouse[b] }
+func (in *Input) IsMousePressed(b MouseButton) bool  { return in.mouse[b] && !in.lastMouse[b] }
+func (in *Input) IsMouseReleased(b MouseButton) bool { return !in.mouse[b] && in.lastMouse[b] }
+func (in *Input) MousePosition() (float32, float32)  { return in.mouseX, in.mouseY }
+func (in *Input) Scroll() (float32, float32)         { return in.scrollX, in.scrollY }
 
 // -------- KeyCodes, Mods, MouseButtons --------
 

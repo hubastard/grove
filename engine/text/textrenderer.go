@@ -54,7 +54,7 @@ func DrawText(r2d *renderer2d.Renderer2D, font *Font, x, y float32, s string, co
 	}
 }
 
-func MeasureText(font *Font, s string, size float32) (width, height float32) {
+func MeasureText(font *Font, s string) (width, height float32) {
 	var lineW float32
 	var prev rune = -1
 	lineH := font.Ascent - font.Descent + font.LineGap

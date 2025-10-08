@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/hubastard/grove/engine/gfx/renderer2d"
 	"github.com/hubastard/grove/engine/platform"
 	"github.com/hubastard/grove/engine/profiler"
+	"github.com/hubastard/grove/engine/scratch"
 	"github.com/hubastard/grove/engine/text"
 )
 
@@ -58,8 +58,9 @@ func (a *App) OnStart(e *core.Engine) {
 }
 
 func (a *App) OnUpdate(e *core.Engine, dt float64) {
+	scratch.Reset() // reset scratch allocator every frame
+
 	a.tick++
-	fmt.Println(profiler.MemoryAllocs())
 
 	// Calculate frame duration
 	now := time.Now()
@@ -76,6 +77,9 @@ func (a *App) OnEvent(e *core.Engine, ev core.Event) {}
 func (a *App) OnShutdown(e *core.Engine)             {}
 
 func main() {
+	// This initialize scratch allocator used in various places, which resets every frame.
+	scratch.Init(4096)
+
 	cfg := core.Config{
 		Title:      "Go Engine (2D)",
 		Width:      1280,

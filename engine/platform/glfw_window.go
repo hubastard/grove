@@ -53,7 +53,7 @@ func NewGLFWWindow(cfg core.Config, onEvent func(core.Event)) (*GLFWWindow, erro
 		gw.emit(core.EventResize{W: w, H: h})
 	})
 	win.SetCursorPosCallback(func(_ *glfw.Window, x, y float64) {
-		gw.emit(core.EventMouseMove{X: x, Y: y})
+		gw.emit(core.EventMouseMove{X: float32(x), Y: float32(y)})
 	})
 	win.SetKeyCallback(func(_ *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 		k := translateKey(key)
@@ -67,7 +67,7 @@ func NewGLFWWindow(cfg core.Config, onEvent func(core.Event)) (*GLFWWindow, erro
 		gw.emit(core.EventMouseButton{Button: b, Down: action != glfw.Release})
 	})
 	win.SetScrollCallback(func(_ *glfw.Window, xoff, yoff float64) {
-		gw.emit(core.EventScroll{Xoff: xoff, Yoff: yoff})
+		gw.emit(core.EventScroll{Xoff: float32(xoff), Yoff: float32(yoff)})
 	})
 
 	return gw, nil

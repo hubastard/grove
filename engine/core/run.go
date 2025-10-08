@@ -72,6 +72,7 @@ func Run(app App, cfg Config, newWindow func(Config) (Window, error), newRendere
 
 		// Poll OS events (platform will emit via callbacks)
 		scopePoll := profiler.Start("PollEvents")
+		eng.Input.NewFrame()
 		win.PollEvents()
 		scopePoll.End()
 
