@@ -74,7 +74,7 @@ func (l *LayerDebug) OnUpdate(e *core.Engine, dt float64) {
 	})
 
 	ui.Label(ui.LabelProps{Text: scratch.Sprintf("Frame: %d", l.tick), Color: colors.Yellow})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\t%2.3f ms (%.2f FPS)", l.frameDuration, 1000.0/l.frameDuration)})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\t%.3f ms (%.2f FPS)", l.frameDuration, 1000.0/l.frameDuration)})
 	ui.Label(ui.LabelProps{Text: "2D Renderer", Color: colors.Yellow})
 	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tDraw Calls: %d", l.stats.DrawCalls)})
 	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tQuads: %d", l.stats.QuadCount)})
