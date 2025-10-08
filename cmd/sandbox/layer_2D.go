@@ -62,7 +62,7 @@ func (l *Layer2D) OnUpdate(e *core.Engine, dt float64) {
 }
 
 func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
-	renderEnd := profiler.Start("Layer2D.OnRender")
+	scopeRender := profiler.Start("Layer2D.OnRender")
 
 	l.r2d.BeginScene(l.cam.VP())
 	{
@@ -70,7 +70,7 @@ func (l *Layer2D) OnRender(e *core.Engine, alpha float64) {
 	}
 	l.r2d.EndScene()
 
-	renderEnd()
+	scopeRender.End()
 }
 
 func (l *Layer2D) OnEvent(e *core.Engine, ev core.Event) bool {

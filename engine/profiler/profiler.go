@@ -17,6 +17,8 @@ import (
 
 // -------- public API --------
 
+var m runtime.MemStats
+
 // Init must be called once (e.g., on app start) with a capacity (#spans).
 // Example: profiler.Init(1 << 20) // ~1M scope samples
 func Init(capacity int) {
@@ -26,24 +28,34 @@ func Init(capacity int) {
 	evrb.init(capacity)
 }
 
-// Start begins a scope and returns an end func to be deferred.
-func Start(name string) func() {
+// Scope is a lightweight handle for an active profiler region.
+type Scope struct {
+	startNS int64
+	frameID int
+	active  bool
+}
+
+// Start begins a scope and returns a handle to close it.
+func Start(name string) Scope {
 	if !evrb.ready.Load() {
-		return func() {}
+		return Scope{}
 	}
 	fid := intern(name)
-	// Emit OPEN now
 	now := time.Now().UnixNano()
 	evrb.push(evEntry{AtNS: now, FrameID: fid, Open: true})
-	return func() {
-		// Emit CLOSE now
-		end := time.Now().UnixNano()
-		// Guarantee end >= start order even if clock equal at µs granularity:
-		if end < now {
-			end = now
-		}
-		evrb.push(evEntry{AtNS: end, FrameID: fid, Open: false})
+	return Scope{startNS: now, frameID: fid, active: true}
+}
+
+// End closes the scope if profiling is active.
+func (s Scope) End() {
+	if !s.active {
+		return
 	}
+	end := time.Now().UnixNano()
+	if end < s.startNS {
+		end = s.startNS
+	}
+	evrb.push(evEntry{AtNS: end, FrameID: s.frameID, Open: false})
 }
 
 // OpenProfilerGraph writes the stats into a temporary speedscope file and open it.
@@ -74,13 +86,11 @@ func OpenProfilerGraph() (string, error) {
 }
 
 func MemoryUsage() uint64 {
-	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	return m.Alloc
 }
 
 func MemoryAllocs() uint64 {
-	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	return m.Mallocs
 }

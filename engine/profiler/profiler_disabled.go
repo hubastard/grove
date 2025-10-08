@@ -2,12 +2,33 @@
 
 package profiler
 
+import "runtime"
+
 // Stubbed no-op versions when the "profile" build tag is not set.
 
+type Scope struct{}
+
+var m runtime.MemStats
+
 func Init(capacity int)                  {}
-func Start(name string) func()           { return func() {} }
+func Start(name string) Scope            { return Scope{} }
+func (Scope) End()                       {}
 func OpenProfilerGraph() (string, error) { return "", nil }
-func MemoryUsage() uint64                { return 0 }
-func MemoryAllocs() uint64               { return 0 }
-func NumGoroutine() int                  { return 0 }
-func NumCPU() int                        { return 0 }
+
+func MemoryUsage() uint64 {
+	runtime.ReadMemStats(&m)
+	return m.Alloc
+}
+
+func MemoryAllocs() uint64 {
+	runtime.ReadMemStats(&m)
+	return m.Mallocs
+}
+
+func NumGoroutine() int {
+	return runtime.NumGoroutine()
+}
+
+func NumCPU() int {
+	return runtime.NumCPU()
+}

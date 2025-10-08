@@ -34,7 +34,7 @@ func (l *LayerDebug) OnDetach(e *core.Engine) {}
 func (l *LayerDebug) OnUpdate(e *core.Engine, dt float64) {}
 
 func (l *LayerDebug) OnRender(e *core.Engine, alpha float64) {
-	renderEnd := profiler.Start("LayerDebug.OnRender")
+	scopeRender := profiler.Start("LayerDebug.OnRender")
 
 	l.r2d.BeginScene(l.cam.VP())
 	{
@@ -74,7 +74,7 @@ func (l *LayerDebug) OnRender(e *core.Engine, alpha float64) {
 	}
 	l.r2d.EndScene()
 
-	renderEnd()
+	scopeRender.End()
 }
 
 func (l *LayerDebug) OnEvent(e *core.Engine, ev core.Event) bool {

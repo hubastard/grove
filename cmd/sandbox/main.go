@@ -53,13 +53,12 @@ func (a *App) OnStart(e *core.Engine) {
 	a.layer = &Layer2D{r2d: a.r2d}
 	e.Layers.Push(a.layer)
 
-	// a.debugLayer = &LayerDebug{r2d: a.r2d, font: a.font, stats: &a.stats}
-	// e.Layers.Push(a.debugLayer)
+	a.debugLayer = &LayerDebug{r2d: a.r2d, font: a.font, stats: &a.stats}
+	e.Layers.Push(a.debugLayer)
 }
 
 func (a *App) OnUpdate(e *core.Engine, dt float64) {
 	a.tick++
-
 	fmt.Println(profiler.MemoryAllocs())
 
 	// Calculate frame duration
