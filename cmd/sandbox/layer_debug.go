@@ -40,11 +40,23 @@ func (l *LayerDebug) OnRender(e *core.Engine, alpha float64) {
 	{
 		ui.View(
 			ui.View(
-				ui.Label(fmt.Sprintf("%2.3f ms (%.2f FPS)", l.frameDuration, 1000.0/l.frameDuration)),
-				ui.Label(fmt.Sprintf("Tick: %d", l.tick)),
-				ui.Label(fmt.Sprintf("Draw Calls: %d", l.stats.DrawCalls)),
-				ui.Label(fmt.Sprintf("Quad Count: %d", l.stats.QuadCount)),
-				ui.Label(fmt.Sprintf("Vertex Count: %d", l.stats.TotalVertexCount())),
+				ui.Label(fmt.Sprintf("Frame: %d", l.tick)).Padding4(0, 24, 0, 0).Color(colors.Yellow),
+				ui.Label(fmt.Sprintf("\t%2.3f ms (%.2f FPS)", l.frameDuration, 1000.0/l.frameDuration)),
+				ui.Label("2D Renderer").Padding4(0, 24, 0, 0).Color(colors.Yellow),
+				ui.Label(fmt.Sprintf("\tDraw Calls: %d", l.stats.DrawCalls)),
+				ui.Label(fmt.Sprintf("\tQuads: %d", l.stats.QuadCount)),
+				ui.Label(fmt.Sprintf("\tVertices: %d", l.stats.TotalVertexCount())),
+				ui.Label(fmt.Sprintf("\tTextures: %d", l.stats.TextureCount)),
+				ui.Label("Memory").Padding4(0, 24, 0, 0).Color(colors.Yellow),
+				ui.Label(fmt.Sprintf("\tUsage: %.3f MB", float32(profiler.MemoryUsage())/(1<<20))),
+				ui.Label(fmt.Sprintf("\tAllocs: %d", profiler.MemoryAllocs())),
+				ui.Label(fmt.Sprintf("\tGoroutines: %d", profiler.NumGoroutine())),
+				ui.Label("CPU").Padding4(0, 24, 0, 0).Color(colors.Yellow),
+				ui.Label(fmt.Sprintf("\tCount: %d", profiler.NumCPU())),
+				ui.Label("GPU").Padding4(0, 24, 0, 0).Color(colors.Yellow),
+				ui.Label(fmt.Sprintf("\tVendor: %s", e.Renderer.GPUVendor())),
+				ui.Label(fmt.Sprintf("\tRenderer: %s", e.Renderer.GPURenderer())),
+				ui.Label(fmt.Sprintf("\tVersion: %s", e.Renderer.GPUVersion())),
 			).
 				FlowDirection(ui.LayoutVertical).
 				Padding(24).

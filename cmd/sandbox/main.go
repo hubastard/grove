@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -52,18 +53,20 @@ func (a *App) OnStart(e *core.Engine) {
 	a.layer = &Layer2D{r2d: a.r2d}
 	e.Layers.Push(a.layer)
 
-	a.debugLayer = &LayerDebug{r2d: a.r2d, font: a.font, stats: &a.stats}
-	e.Layers.Push(a.debugLayer)
+	// a.debugLayer = &LayerDebug{r2d: a.r2d, font: a.font, stats: &a.stats}
+	// e.Layers.Push(a.debugLayer)
 }
 
 func (a *App) OnUpdate(e *core.Engine, dt float64) {
 	a.tick++
-	a.debugLayer.tick = a.tick
+
+	fmt.Println(profiler.MemoryAllocs())
 
 	// Calculate frame duration
 	now := time.Now()
-	if !a.lastFrame.IsZero() {
+	if a.debugLayer != nil && !a.lastFrame.IsZero() {
 		a.debugLayer.frameDuration = float32(now.Sub(a.lastFrame).Seconds() * 1000.0)
+		a.debugLayer.tick = a.tick
 	}
 	a.lastFrame = now
 }

@@ -125,6 +125,12 @@ func (r *RendererGL) CreateTexture(desc core.TextureDesc) (core.Texture, error) 
 	return &texGL{id: id, w: desc.Width, h: desc.Height}, nil
 }
 
+func (r *RendererGL) GPUVendor() string   { return gl.GoStr(gl.GetString(gl.VENDOR)) }
+func (r *RendererGL) GPURenderer() string { return gl.GoStr(gl.GetString(gl.RENDERER)) }
+func (r *RendererGL) GPUVersion() string  { return gl.GoStr(gl.GetString(gl.VERSION)) }
+
+// ------- Helpers -------
+
 func toGLFilter(f string) int32 {
 	switch f {
 	case "linear":

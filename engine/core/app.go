@@ -107,6 +107,9 @@ type Renderer interface {
 	CreateTexture(desc TextureDesc) (Texture, error)
 	Draw(cmd DrawCmd)
 	Shutdown()
+	GPUVendor() string
+	GPURenderer() string
+	GPUVersion() string
 }
 
 // -------- Events --------

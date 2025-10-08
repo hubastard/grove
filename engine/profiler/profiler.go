@@ -73,6 +73,26 @@ func OpenProfilerGraph() (string, error) {
 	return profilePath, nil
 }
 
+func MemoryUsage() uint64 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return m.Alloc
+}
+
+func MemoryAllocs() uint64 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return m.Mallocs
+}
+
+func NumGoroutine() int {
+	return runtime.NumGoroutine()
+}
+
+func NumCPU() int {
+	return runtime.NumCPU()
+}
+
 // ---------- event ring ----------
 
 type evEntry struct {

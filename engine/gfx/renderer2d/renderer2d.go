@@ -17,8 +17,9 @@ const indsPerQuad = 6
 
 // Statistics captures the counts generated during a renderer frame.
 type Statistics struct {
-	DrawCalls int
-	QuadCount int
+	DrawCalls    int
+	QuadCount    int
+	TextureCount int
 }
 
 // TotalVertexCount reports vertices submitted this frame.
@@ -147,6 +148,7 @@ func (rd *Renderer2D) texSlot(t core.Texture) float32 {
 	}
 	rd.texArr[rd.texCnt] = t
 	rd.texCnt++
+	rd.stats.TextureCount = rd.texCnt
 	return float32(rd.texCnt - 1)
 }
 
