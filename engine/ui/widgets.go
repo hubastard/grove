@@ -29,9 +29,8 @@ func Label(p LabelProps) {
 	case SizeExpand: /* same as above */
 	}
 
-	col := p.Color
-	if col[0] == 0 && col[1] == 0 && col[2] == 0 && col[3] == 0 {
-		col = colors.White
+	if p.Color[0] == 0 && p.Color[1] == 0 && p.Color[2] == 0 && p.Color[3] == 0 {
+		p.Color = colors.White
 	}
 
 	iCmd := emit(ctx, cmd{
@@ -39,7 +38,7 @@ func Label(p LabelProps) {
 		id:       p.ID,
 		text:     p.Text,
 		fontSize: p.FontSize,
-		color:    col,
+		color:    p.Color,
 	})
 
 	addItem(ctx, item{kind: cmdLabel, iCmd: iCmd, w: w, h: h})
@@ -75,6 +74,10 @@ func Button(p ButtonProps) (clicked bool) {
 		h = sz.HVal
 	}
 
+	if p.TextCol[0] == 0 && p.TextCol[1] == 0 && p.TextCol[2] == 0 && p.TextCol[3] == 0 {
+		p.TextCol = colors.White
+	}
+
 	iCmd := emit(ctx, cmd{
 		kind:     cmdButton,
 		id:       p.ID,
@@ -91,8 +94,7 @@ func Button(p ButtonProps) (clicked bool) {
 	// a single pass, we return the last-known click state from the map,
 	// which we set during resolve. This works frame-to-frame.
 	st := ctx.state[p.ID]
-	return st.active == false && st.hot == false && // released happened last frame
-		ctx.I.MouseReleased && pointInCmd(ctx, &ctx.cmds[iCmd], ctx.I.MouseX, ctx.I.MouseY)
+	return !st.active && !st.hot && ctx.I.MouseReleased && pointInCmd(ctx, &ctx.cmds[iCmd], ctx.I.MouseX, ctx.I.MouseY)
 }
 
 // ===== Internal: record & resolve =====
@@ -103,10 +105,6 @@ func emit(ctx *Ctx, c cmd) int {
 	}
 	ctx.cmds = append(ctx.cmds, c)
 	return len(ctx.cmds) - 1
-}
-
-func emitBg(ctx *Ctx, x, y, w, h float32, col [4]float32) {
-	_ = emit(ctx, cmd{kind: cmdBgQuad, x: x, y: y, w: w, h: h, bg: col})
 }
 
 func resolveWidget(ctx *Ctx, c *cmd) {

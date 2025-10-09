@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/hubastard/grove/engine/colors"
@@ -70,29 +71,24 @@ func (l *LayerDebug) OnUpdate(e *core.Engine, dt float64) {
 		Axis:      ui.Vertical,
 		MainAlign: ui.End,
 		Sizing:    ui.Fit(),
-		Padding:   ui.Insets(8, 8, 8, 8),
+		Padding:   ui.Insets(24, 24, 24, 24),
 		Gap:       8,
-		ID:        1,
+		Bg:        colors.Black.WithAlpha(0.5),
 	})
 
 	ui.Label(ui.LabelProps{Text: scratch.Sprintf("Frame: %d", l.tick), Color: colors.Yellow})
 	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\t%.3f ms (%.2f FPS)", l.frameDuration, 1000.0/l.frameDuration)})
 	ui.Label(ui.LabelProps{Text: "2D Renderer", Color: colors.Yellow})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tDraw Calls: %d", l.stats.DrawCalls)})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tQuads: %d", l.stats.QuadCount)})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tVertices: %d", l.stats.TotalVertexCount())})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tTextures: %d", l.stats.TextureCount)})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tDraw Calls: %d\n\tQuads: %d\n\tVertices: %d\n\tTextures: %d", l.stats.DrawCalls, l.stats.QuadCount, l.stats.TotalVertexCount(), l.stats.TextureCount)})
 	ui.Label(ui.LabelProps{Text: "Memory", Color: colors.Yellow})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tUsage: %.3f MB", float32(profiler.MemoryUsage())/(1<<20))})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tTotal Allocs: %d", l.allocs)})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tFrame Allocs: %d", l.allocs-l.lastAllocs)})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tGoroutines: %d", profiler.NumGoroutine())})
-	ui.Label(ui.LabelProps{Text: "CPU", Color: colors.Yellow})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tCount: %d", profiler.NumCPU())})
-	ui.Label(ui.LabelProps{Text: "GPU", Color: colors.Yellow})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tVendor: %s", e.Renderer.GPUVendor())})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tRenderer: %s", e.Renderer.GPURenderer())})
-	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tVersion: %s", e.Renderer.GPUVersion())})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tUsage: %.3f MB\n\tTotal Allocs: %d\n\tFrame Allocs: %d\n\tGoroutines: %d", float32(profiler.MemoryUsage())/(1<<20), l.allocs, l.allocs-l.lastAllocs, profiler.NumGoroutine())})
+	ui.Label(ui.LabelProps{Text: "Hardware", Color: colors.Yellow})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tCPU Cores: %d", profiler.NumCPU())})
+	ui.Label(ui.LabelProps{Text: scratch.Sprintf("\tGPU: %s - v%s", e.Renderer.GPURenderer(), e.Renderer.GPUVersion())})
+
+	if ui.Button(ui.ButtonProps{ID: 2, Text: "Click Me!", Padding: ui.Insets(16, 8, 16, 8), Bg: colors.Blue}) {
+		fmt.Println("Button clicked!")
+	}
 
 	ui.EndView()
 }

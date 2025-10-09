@@ -66,6 +66,7 @@ type viewScope struct {
 	// Children recorded during measure phase
 	firstCmd int // index in ctx.cmds where children commands begin
 	nCmds    int
+	bgCmd    int // optional background command index
 
 	// Measured children
 	firstItem int // index in ctx.items
@@ -125,6 +126,16 @@ func BeginView(p Props) {
 		props:     p,
 		firstCmd:  len(ctx.cmds),
 		firstItem: len(ctx.items),
+		bgCmd:     -1,
+	}
+	if p.Bg[3] > 0 {
+		idx := emit(ctx, cmd{
+			kind: cmdBgQuad,
+			bg:   p.Bg,
+		})
+		if idx >= 0 {
+			scope.bgCmd = idx
+		}
 	}
 	ctx.viewStack = append(ctx.viewStack, scope)
 }
@@ -201,8 +212,13 @@ func EndView() {
 	scope.h = maxf(0, availH-scope.props.Padding.T-scope.props.Padding.B)
 
 	// optional background
-	if scope.props.Bg[3] > 0 {
-		emitBg(ctx, scope.props.BoundsX, scope.props.BoundsY, availW, availH, scope.props.Bg)
+	if scope.bgCmd >= 0 {
+		c := &ctx.cmds[scope.bgCmd]
+		c.x = scope.props.BoundsX
+		c.y = scope.props.BoundsY
+		c.w = availW
+		c.h = availH
+		c.bg = scope.props.Bg
 	}
 
 	// compute starting offset for main align
